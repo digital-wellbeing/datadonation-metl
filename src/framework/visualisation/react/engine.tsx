@@ -78,6 +78,14 @@ export default class ReactEngine implements VisualisationEngine {
         
         console.log('[ReactEngine] Rendering page type:', command.page.__type__)
         
+        // Special logging for end pages to track submission ID
+        if (command.page.__type__ === 'PropsUIPageEnd') {
+          console.log('[ReactEngine] [SUBMISSION_TRACKING] Rendering end page');
+          console.log('[ReactEngine] [SUBMISSION_TRACKING] End page info field:', (command.page as any).info);
+          console.log('[ReactEngine] [SUBMISSION_TRACKING] Current window.submissionId:', window.submissionId);
+          console.log('[ReactEngine] [SUBMISSION_TRACKING] End page props:', command.page);
+        }
+        
         // Create the page to render based on the page props
         try {
           // Create a proper context object with locale and resolve function

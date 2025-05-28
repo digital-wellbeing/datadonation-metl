@@ -325,15 +325,21 @@ function runCycle(payload) {
     
     // Special handling for CommandSystemExit - immediately transition to end page
     if (eventType === 'CommandSystemExit') {
-      console.log('[ProcessingWorker] Handling exit command, transitioning to end page');
+      console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Handling exit command, transitioning to end page');
       
       // Extract submission info if available
       const exitCode = scriptEvent.get('code');
       const exitInfo = scriptEvent.get('info') || '';
-      console.log(`[ProcessingWorker] Exit details: code=${exitCode}, info=${exitInfo}`);
+      console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Exit details:', {
+        code: exitCode,
+        info: exitInfo,
+        infoType: typeof exitInfo,
+        timestamp: new Date().toISOString()
+      });
       
       // Store the info for later use
       self.lastEventInfo = exitInfo;
+      console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Stored exit info for later use:', exitInfo);
       
       // Create end page command
       const endPageCommand = {
@@ -345,6 +351,8 @@ function runCycle(payload) {
         }
       };
       
+      console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Created end page command with info:', exitInfo);
+      
       // Update state to end_page in Python
       self.pyodide.runPython(`
         old_state = py_script._current_state
@@ -355,6 +363,7 @@ function runCycle(payload) {
       console.log('[ProcessingWorker] State transition:', currentState, '->', 'end_page');
       
       // Send the end page command back to the main thread
+      console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Sending end page command to main thread');
       self.postMessage({
         eventType: 'runCycleDone',
         scriptEvent: endPageCommand

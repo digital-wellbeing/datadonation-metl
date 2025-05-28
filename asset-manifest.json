@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "./static/css/main.28f7ab53.css",
-    "main.js": "./static/js/main.c2437a51.js",
+    "main.css": "./static/css/main.cfa1199b.css",
+    "main.js": "./static/js/main.2a0c009d.js",
     "static/js/198.6da0e530.chunk.js": "./static/js/198.6da0e530.chunk.js",
     "static/media/Finador-BlackOblique.woff": "./static/media/Finador-BlackOblique.8e3feb4617564028ac09.woff",
     "static/media/Finador-RegularOblique.woff": "./static/media/Finador-RegularOblique.66b1b40866f3f75015d6.woff",
@@ -31,23 +31,25 @@
     "static/media/Finador-Thin.woff": "./static/media/Finador-Thin.6529a0517644d0d94527.woff",
     "static/media/Finador-Medium.woff2": "./static/media/Finador-Medium.904b493a957de121d1f7.woff2",
     "static/media/Finador-Thin.woff2": "./static/media/Finador-Thin.d11fc530809dc729346c.woff2",
-    "static/media/py_worker.js": "./static/media/py_worker.c0356c484aea54c8aa7f.js",
+    "static/media/py_worker.js": "./static/media/py_worker.99d4c0a83ff7c95bf18a.js",
     "static/media/logo.svg": "./static/media/logo.f5694ed87add75005981866a3dbb8b5f.svg",
     "index.html": "./index.html",
     "static/media/delete.svg": "./static/media/delete.52e6851b1a65c25db5a603cd9988d336.svg",
     "static/media/check_active.svg": "./static/media/check_active.960826e06093589f13a939cd11c7a1af.svg",
+    "static/media/copy.svg": "./static/media/copy.f786dcb207ee1e64e0e38dbb891b4247.svg",
     "static/media/undo.svg": "./static/media/undo.7711178100058d5fe1926827dfdd12d6.svg",
+    "static/media/checkmark.svg": "./static/media/checkmark.760604afbc6e1bc3e4ddecfae520ced2.svg",
     "static/media/forward.svg": "./static/media/forward.34ff20a946ccbd1ece34dd21d7b67753.svg",
     "static/media/radio_active.svg": "./static/media/radio_active.c0fc948096ad99ce42251580aa8fd219.svg",
     "static/media/back.svg": "./static/media/back.da58add26f133b17074fc3c8bc19b1d4.svg",
     "static/media/check.svg": "./static/media/check.62d1e3846cf9f4002c37c986555f222e.svg",
     "static/media/radio.svg": "./static/media/radio.a8976f7cd2094465a9e60270572060bb.svg",
-    "main.28f7ab53.css.map": "./static/css/main.28f7ab53.css.map",
-    "main.c2437a51.js.map": "./static/js/main.c2437a51.js.map",
+    "main.cfa1199b.css.map": "./static/css/main.cfa1199b.css.map",
+    "main.2a0c009d.js.map": "./static/js/main.2a0c009d.js.map",
     "198.6da0e530.chunk.js.map": "./static/js/198.6da0e530.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.28f7ab53.css",
-    "static/js/main.c2437a51.js"
+    "static/css/main.cfa1199b.css",
+    "static/js/main.2a0c009d.js"
   ]
 }

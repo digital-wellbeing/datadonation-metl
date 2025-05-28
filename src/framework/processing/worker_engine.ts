@@ -190,6 +190,10 @@ export default class WorkerProcessingEngine implements ProcessingEngine {
 
   firstRunCycle (): void {
     console.debug('[WorkerProcessingEngine] Starting first run cycle with session ID:', this.sessionId)
+    console.log('[WorkerProcessingEngine] [SUBMISSION_TRACKING] Initializing donation process');
+    console.log('[WorkerProcessingEngine] [SUBMISSION_TRACKING] Session ID:', this.sessionId);
+    console.log('[WorkerProcessingEngine] [SUBMISSION_TRACKING] Selected platform:', this.selectedPlatform);
+    console.log('[WorkerProcessingEngine] [SUBMISSION_TRACKING] Current window.submissionId:', window.submissionId);
     
     // Send the platform information along with the sessionId to initialize the Python script with the correct platform
     this.worker.postMessage({ 

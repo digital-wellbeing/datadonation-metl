@@ -10,6 +10,20 @@ import { ReactFactoryContext } from '../../factory'
 import React from 'react'
 import _ from 'lodash'
 
+declare global {
+  interface Window {
+    submissionId: number | undefined;
+  }
+}
+
+// Generate a random 16-digit submission ID as a number
+function generateSubmissionId(): number {
+  // Generate a number between 1000_0000_0000_0000 and 9999_9999_9999_9999
+  const submissionId = Math.floor(1000_0000_0000_0000 + Math.random() * 9000_0000_0000_0000);
+  console.log('[ConsentForm] [SUBMISSION_TRACKING] Generated new submission ID:', submissionId);
+  return submissionId;
+}
+
 type Props = Weak<PropsUIPromptConsentForm> & ReactFactoryContext
 
 interface TableContext {
@@ -111,6 +125,17 @@ export const ConsentForm = (props: Props): JSX.Element => {
 
   function handleDonate (): void {
     console.debug('[ConsentForm] User clicked Donate button')
+    console.log('[ConsentForm] [SUBMISSION_TRACKING] Starting donation process');
+    console.log('[ConsentForm] [SUBMISSION_TRACKING] Current window.submissionId before donation:', window.submissionId);
+    
+    // Generate submission ID when user clicks "Yes, donate"
+    if (!window.submissionId) {
+      window.submissionId = generateSubmissionId();
+      console.log('[ConsentForm] [SUBMISSION_TRACKING] Generated submission ID on donate button click:', window.submissionId);
+    } else {
+      console.log('[ConsentForm] [SUBMISSION_TRACKING] Using existing submission ID:', window.submissionId);
+    }
+    
     setWaiting(true)
     
     // We need to make sure we include all the original tables in the serialized data 
@@ -131,6 +156,10 @@ export const ConsentForm = (props: Props): JSX.Element => {
     const value = JSON.stringify(
       serializeTablesArray(combinedTables).concat(serializeMetaData())
     )
+    
+    console.log('[ConsentForm] [SUBMISSION_TRACKING] Serialized donation data length:', value.length);
+    console.log('[ConsentForm] [SUBMISSION_TRACKING] Submission ID will be:', window.submissionId);
+    console.log('[ConsentForm] [SUBMISSION_TRACKING] Sending donation payload to resolve function');
     
     resolve?.({ __type__: 'PayloadJSON', value })
   }

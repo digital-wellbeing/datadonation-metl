@@ -1134,14 +1134,15 @@ class DataDonationProcessor:
         if consent_result.__type__ == "PayloadJSON":
             donation_id = f"{self.session_id}-{self.platform}"
             self.log(f"trying to donate consent data with ID: {donation_id}")
-            debug_log(f"Setting donation ID: {donation_id}")
+            debug_log(f"[DONATION_TRACKING] Creating donation ID: {donation_id}")
+            debug_log(f"[DONATION_TRACKING] Session ID: {self.session_id}, Platform: {self.platform}")
             
             # We don't need global here, as donate() will handle setting the global variable
             try:
                 yield donate(donation_id, consent_result.value)
-                debug_log("Donation command yielded successfully")
+                debug_log("[DONATION_TRACKING] Donation command yielded successfully")
             except Exception as e:
-                debug_log(f"Error in donate command: {str(e)}")
+                debug_log(f"[DONATION_TRACKING] Error in donate command: {str(e)}")
                 import traceback
                 traceback.print_exc()
                 
@@ -1249,14 +1250,18 @@ def render_end_page():
     global last_donation_id
     print("arrived at render_end_page()")
     # Create end page with submission ID
-    debug_log(f"Rendering end page with donation ID: {last_donation_id}")
+    debug_log(f"[DONATION_TRACKING] Rendering end page with donation ID: {last_donation_id}")
+    debug_log(f"[DONATION_TRACKING] End page submission ID type: {type(last_donation_id)}")
     
     # If last_donation_id is None or empty, set a default value
     if not last_donation_id:
-        debug_log("Warning: No donation ID was set, using a default value")
+        debug_log("[DONATION_TRACKING] Warning: No donation ID was set, using a default value")
         last_donation_id = "default-submission-id"
+        debug_log(f"[DONATION_TRACKING] Set fallback donation ID: {last_donation_id}")
         
+    debug_log(f"[DONATION_TRACKING] Final donation ID for end page: {last_donation_id}")
     page = props.PropsUIPageEnd(last_donation_id)
+    debug_log(f"[DONATION_TRACKING] Created PropsUIPageEnd with submission_id: {last_donation_id}")
     return CommandUIRender(page)
 
 def render_splash_pace():
@@ -1299,9 +1304,11 @@ def prompt_consent(id, data, meta_data):
 def donate(key, json_string):
     global last_donation_id
     print(f"arrived at donate() with key: {key}")
+    debug_log(f"[DONATION_TRACKING] Setting donation ID: {key}")
+    debug_log(f"[DONATION_TRACKING] Previous donation ID was: {last_donation_id}")
     # Store the donation key for later use in the end page
     last_donation_id = key
-    debug_log(f"Set donation ID in donate(): {last_donation_id}")
+    debug_log(f"[DONATION_TRACKING] Updated donation ID to: {last_donation_id}")
     return CommandSystemDonate(key, json_string)
 
 

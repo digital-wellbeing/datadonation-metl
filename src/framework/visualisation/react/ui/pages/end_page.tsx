@@ -17,6 +17,25 @@ export const EndPage = (props: Props): JSX.Element => {
   const { resolve, locale } = props
   const submissionId = String(props.info || window.submissionId || '')
 
+  // Enhanced logging for submission ID tracking
+  console.log('[EndPage] [SUBMISSION_TRACKING] EndPage component rendered with props:', {
+    propsInfo: props.info,
+    windowSubmissionId: window.submissionId,
+    finalSubmissionId: submissionId,
+    hasSubmissionId: !!submissionId,
+    timestamp: new Date().toISOString()
+  });
+
+  // Log error if submission ID is missing
+  if (!submissionId) {
+    console.error('[EndPage] [SUBMISSION_TRACKING] ERROR: Submission ID is missing!');
+    console.error('[EndPage] [SUBMISSION_TRACKING] Props.info:', props.info);
+    console.error('[EndPage] [SUBMISSION_TRACKING] window.submissionId:', window.submissionId);
+    console.error('[EndPage] [SUBMISSION_TRACKING] This indicates the donation process may not have completed successfully');
+  } else {
+    console.log('[EndPage] [SUBMISSION_TRACKING] SUCCESS: Submission ID found:', submissionId);
+  }
+
   // Resolve with PayloadVoid when component mounts
   React.useEffect(() => {
     if (resolve) {
@@ -75,6 +94,6 @@ const text = new TextBundle()
   .add('nl', 'Hartelijk dank voor uw deelname. U kunt deze pagina nu sluiten of de pagina verversen om de flow nogmaals te doorlopen.')
 
 const errorMessage = new TextBundle()
-  .add('en', 'Error: Submission ID is missing. Please try submitting your data again.')
+  .add('en', 'Error: Submission ID is missing. Please contact support.')
   .add('de', 'Fehler: Einreichungs-ID fehlt. Bitte versuchen Sie, Ihre Daten erneut zu übermitteln.')
   .add('nl', 'Fout: Inzending-ID ontbreekt. Probeer uw gegevens opnieuw in te dienen.')

@@ -11,7 +11,9 @@ declare global {
 // Generate a random 16-digit submission ID as a number
 function generateSubmissionId(): number {
   // Generate a number between 1000_0000_0000_0000 and 9999_9999_9999_9999
-  return Math.floor(1000_0000_0000_0000 + Math.random() * 9000_0000_0000_0000);
+  const submissionId = Math.floor(1000_0000_0000_0000 + Math.random() * 9000_0000_0000_0000);
+  console.log('[FakeBridge] [SUBMISSION_TRACKING] Generated new submission ID:', submissionId);
+  return submissionId;
 }
 
 interface DataItem {
@@ -25,6 +27,12 @@ interface DataItem {
 
 export default class FakeBridge implements Bridge {
   send(command: CommandSystem): void {
+    console.log('[FakeBridge] [SUBMISSION_TRACKING] Received command:', {
+      type: command.__type__,
+      key: isCommandSystemDonate(command) ? command.key : 'N/A',
+      timestamp: new Date().toISOString()
+    });
+
     if (isCommandSystemDonate(command)) {
       this.handleDonation(command);
     } else if (isCommandSystemExit(command)) {
@@ -49,19 +57,24 @@ export default class FakeBridge implements Bridge {
       }
 
       const platform = isTikTokDonation ? 'TikTok' : 'ActivityWatch';
-      console.log(`[FakeBridge] Processing ${platform} data:`, {
+      console.log(`[FakeBridge] [SUBMISSION_TRACKING] Processing ${platform} data donation:`, {
         key: command.key,
-        tableName: 'uploads',
-        insertData: {
-          json_data: data,
-          filename: `${command.key}.json`
-        }
+        platform: platform,
+        timestamp: new Date().toISOString()
       });
+
+      // Use existing submission ID that was generated when user clicked "Yes, donate"
+      if (!window.submissionId) {
+        console.error('[FakeBridge] [SUBMISSION_TRACKING] ERROR: No submission ID found! This should have been generated when user clicked "Yes, donate"');
+        window.submissionId = generateSubmissionId();
+        console.log('[FakeBridge] [SUBMISSION_TRACKING] Generated fallback submission ID:', window.submissionId);
+      } else {
+        console.log('[FakeBridge] [SUBMISSION_TRACKING] Using submission ID from donate button click:', window.submissionId);
+      }
 
       // Find the metadata section that contains the original filename
       const metadata = data.find((item: DataItem) => item.id === 'metadata');
-      console.log('[FakeBridge] Full data structure:', JSON.stringify(data, null, 2));
-      console.log('[FakeBridge] Metadata object:', JSON.stringify(metadata, null, 2));
+      console.log('[FakeBridge] Metadata object found:', !!metadata);
       
       // Get filename from the DataFrame's split format
       const originalFilename = metadata?.data_frame?.columns?.includes('original_filename') 
@@ -70,7 +83,7 @@ export default class FakeBridge implements Bridge {
       console.log('[FakeBridge] Extracted filename:', originalFilename);
 
       // Insert into Supabase with detailed error handling
-      window.submissionId = generateSubmissionId();
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] Attempting database insert with submission ID:', window.submissionId);
       
       const { data: insertedData, error } = await supabase
         .from('uploads')
@@ -82,32 +95,73 @@ export default class FakeBridge implements Bridge {
         });
 
       if (error) {
+        console.error('[FakeBridge] [SUBMISSION_TRACKING] Database insert failed:', error);
         throw error;
       }
 
-      console.log(`[FakeBridge] ${platform} data saved successfully to Supabase:`, insertedData);
+      console.log(`[FakeBridge] [SUBMISSION_TRACKING] ${platform} data saved successfully to Supabase`);
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] Database insert completed with submission ID:', window.submissionId);
       
       // After successful save, exit with submission ID
+      const exitInfo = window.submissionId?.toString() || 'unknown';
+      if (!window.submissionId) {
+        console.error('[FakeBridge] [SUBMISSION_TRACKING] ERROR: No submission ID available for exit command!');
+      }
+      
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] Preparing exit with submission ID info:', exitInfo);
       this.handleExit({
         __type__: 'CommandSystemExit',
         code: 0,
-        info: window.submissionId?.toString() || 'unknown'
+        info: exitInfo
       });
     } catch (error: unknown) {
       const err = error as Error;
-      console.error('[FakeBridge] Error saving to Supabase:', {
+      console.error('[FakeBridge] [SUBMISSION_TRACKING] Error saving to Supabase:', {
         message: err.message,
         key: command.key,
+        submissionId: window.submissionId,
         timestamp: new Date().toISOString()
       });
       console.error('Please check:');
       console.error('1. Supabase connection (see previous logs)');
       console.error('2. Database permissions for the uploads table');
       console.error('3. Valid JSON data structure');
+      
+      // Even on error, try to exit gracefully with whatever submission ID we have
+      const exitInfo = window.submissionId?.toString() || 'error';
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] Exiting with error, submission ID:', exitInfo);
+      this.handleExit({
+        __type__: 'CommandSystemExit',
+        code: 1,
+        info: exitInfo
+      });
     }
   }
 
   handleExit(command: CommandSystemExit): void {
-    console.log(`[FakeBridge] received exit: ${command.code}=${command.info}`);
+    console.log('[FakeBridge] [SUBMISSION_TRACKING] Handling exit command:', {
+      type: command.__type__,
+      code: command.code,
+      info: command.info,
+      windowSubmissionId: window.submissionId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Ensure submission ID consistency
+    if (command.info && typeof command.info === 'string' && !window.submissionId) {
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] Setting window.submissionId from exit command info');
+      const parsedId = parseInt(command.info, 10);
+      if (!isNaN(parsedId)) {
+        window.submissionId = parsedId;
+      }
+    }
+    
+    console.log('[FakeBridge] [SUBMISSION_TRACKING] Final state before exit:', {
+      commandInfo: command.info,
+      windowSubmissionId: window.submissionId,
+      hasSubmissionId: !!(command.info || window.submissionId)
+    });
+    
+    // Exit is handled by the processing engine
   }
 }
