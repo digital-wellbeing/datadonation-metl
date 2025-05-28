@@ -48,7 +48,7 @@ export default class FakeBridge implements Bridge {
       
       // Check if this is a platform donation (either TikTok or ActivityWatch) or just a tracking message
       const isTikTokDonation = command.key.endsWith('-TikTok');
-      const isActivityWatchDonation = command.key.endsWith('-ActivityWatch');
+      const isActivityWatchDonation = command.key.endsWith('-ActivityWatch') || command.key.endsWith('-Activitywatch');
       
       // Skip tracking messages that aren't platform donations
       if (!isTikTokDonation && !isActivityWatchDonation) {
