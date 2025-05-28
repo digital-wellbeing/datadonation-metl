@@ -1,0 +1,4 @@
+pyodide==0.23.4
+micropip==0.1.0
+pandas==1.5.3
+poetry==1.8.2
