@@ -451,8 +451,8 @@ const activityWatchTitle = new TextBundle()
 
 // Keep the existing continueButton and privacyLabel TextBundles
 const continueButton = new TextBundle()
-  .add('en', 'Start')
-  .add('nl', 'Start')
+  .add('en', 'Yes, donate')
+  .add('nl', 'Ja, doneer')
 
 const privacyLabel = new TextBundle()
   .add('en', 'I have read and agree with the above terms.')

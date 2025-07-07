@@ -124,6 +124,12 @@ export const ConsentForm = (props: Props): JSX.Element => {
   }
 
   function handleDonate (): void {
+    // Don't proceed if validation failed
+    if (props.validationFailed) {
+      console.debug('[ConsentForm] Donation blocked due to validation failure')
+      return
+    }
+    
     console.debug('[ConsentForm] User clicked Donate button')
     console.log('[ConsentForm] [SUBMISSION_TRACKING] Starting donation process');
     console.log('[ConsentForm] [SUBMISSION_TRACKING] Current window.submissionId before donation:', window.submissionId);
@@ -213,19 +219,32 @@ export const ConsentForm = (props: Props): JSX.Element => {
 
   return (
     <>
-      <BodyLarge text={Translator.translate(props.description ?? description, locale)} />
+      {props.validationFailed ? (
+        <div className='bg-orange-100 border-l-4 border-orange-500 p-4 rounded mb-6'>
+          <BodyLarge 
+            text={Translator.translate(props.description ?? description, locale)} 
+            margin=''
+          />
+        </div>
+      ) : (
+        <BodyLarge text={Translator.translate(props.description ?? description, locale)} />
+      )}
       <div className='flex flex-col gap-8'>
         {tablesIn.current.map((table) => renderTable(table))}
-        <div>
-          <BodyLarge margin='' text={Translator.translate(props.donateQuestion ?? donateQuestionLabel, locale)} />
-          <div className='flex flex-row gap-4 mt-4 mb-4'>
-            <PrimaryButton
-              label={Translator.translate(props.donateButton ?? donateButtonLabel, locale)}
-              onClick={handleDonate} color='bg-success text-white' spinning={waiting}
-            />
-            <LabelButton label={cancelButton} onClick={handleCancel} color='text-grey1' />
+        {!props.validationFailed && (
+          <div>
+            <BodyLarge margin='' text={Translator.translate(props.donateQuestion ?? donateQuestionLabel, locale)} />
+            <div className='flex flex-row gap-4 mt-4 mb-4'>
+              <PrimaryButton
+                label={Translator.translate(props.donateButton ?? donateButtonLabel, locale)}
+                onClick={handleDonate} 
+                color='bg-success text-white'
+                spinning={waiting}
+              />
+              <LabelButton label={cancelButton} onClick={handleCancel} color='text-grey1' />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </>
   )

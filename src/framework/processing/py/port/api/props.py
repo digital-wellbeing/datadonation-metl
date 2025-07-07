@@ -116,6 +116,7 @@ class PropsUIPromptConsentForm:
     Attributes:
         tables: a list of tables
         meta_tables: a list of optional tables, for example for logging data
+        validation_failed: flag indicating if data validation failed
     """
 
     tables: list[PropsUIPromptConsentFormTable]
@@ -123,6 +124,7 @@ class PropsUIPromptConsentForm:
     description: Optional[Translatable] = None
     donate_question: Optional[Translatable] = None
     donate_button: Optional[Translatable] = None
+    validation_failed: bool = False
 
     def translate_tables(self):
         output = []
@@ -144,6 +146,7 @@ class PropsUIPromptConsentForm:
         dict["description"] = self.description and self.description.toDict()
         dict["donateQuestion"] = self.donate_question and self.donate_question.toDict()
         dict["donateButton"] = self.donate_button and self.donate_button.toDict()
+        dict["validationFailed"] = self.validation_failed
         return dict
 
 
@@ -255,14 +258,17 @@ class PropsUIPageEnd:
     
     Attributes:
         submission_id: Optional ID to display on the end page
+        donated: Boolean indicating if the user donated
     """
     
-    def __init__(self, submission_id=None):
+    def __init__(self, submission_id=None, donated=False):
         self.submission_id = submission_id
+        self.donated = donated
     
     def toDict(self):
         dict = {}
         dict["__type__"] = "PropsUIPageEnd"
         if self.submission_id:
             dict["info"] = self.submission_id
+        dict["donated"] = self.donated
         return dict

@@ -61,3 +61,4 @@ mcp.json
 *.bak
 *~
 *.swp
+*.ts

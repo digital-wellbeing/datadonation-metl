@@ -66,6 +66,7 @@ export function isPropsUIPageDonation (arg: any): arg is PropsUIPageDonation {
 
 export interface PropsUIPageEnd {
   __type__: 'PropsUIPageEnd'
+  donated?: boolean
 }
 export function isPropsUIPageEnd (arg: any): arg is PropsUIPageEnd {
   return isInstanceOf<PropsUIPageEnd>(arg, 'PropsUIPageEnd', [])

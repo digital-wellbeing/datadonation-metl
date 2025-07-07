@@ -209,33 +209,71 @@ function runCycle(payload) {
       if (lastEventType === 'CommandSystemDonate' || lastEventType === 'CommandSystemExit') {
         console.log('[ProcessingWorker] Received void payload after donation/exit, showing end page');
         
-        // Create end page
-        const endPageCommand = {
-          __type__: 'CommandUIRender',
-          page: {
-            __type__: 'PropsUIPageEnd',
-            locale: 'en',
-            info: lastEventInfo
-          }
-        };
-        
-        console.log('[ProcessingWorker] Created end page command:', endPageCommand);
-        
-        // Update state to end_page in Python
-        self.pyodide.runPython(`
-          old_state = py_script._current_state
-          py_script._current_state = 'end_page'
-          print("State transition:", old_state, "->", "end_page")
-        `);
-        
-        console.log('[ProcessingWorker] State transition:', currentState, '->', 'end_page');
-        
-        // Send the end page command back to the main thread
-        self.postMessage({
-          eventType: 'runCycleDone',
-          scriptEvent: endPageCommand
-        });
-        return;
+        // Let Python handle the end page creation to ensure proper donation status tracking
+        try {
+          console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Calling Python render_end_page() from void payload handler');
+          const endPageCommand = self.pyodide.runPython(`
+            # Import and call the render_end_page function directly from the script module
+            from port.script import render_end_page
+            end_page_cmd = render_end_page()
+            end_page_cmd.toDict() if hasattr(end_page_cmd, 'toDict') else end_page_cmd
+          `);
+          
+          console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Python created end page command from void payload:', endPageCommand);
+          
+          // Convert Python object to JavaScript object
+          const jsEndPageCommand = endPageCommand.toJs({
+            create_proxies: false,
+            dict_converter: Object.fromEntries
+          });
+          
+          // Update state to end_page in Python
+          self.pyodide.runPython(`
+            old_state = py_script._current_state
+            py_script._current_state = 'end_page'
+            print("State transition:", old_state, "->", "end_page")
+          `);
+          
+          console.log('[ProcessingWorker] State transition:', currentState, '->', 'end_page');
+          
+          // Send the converted JavaScript end page command back to the main thread
+          self.postMessage({
+            eventType: 'runCycleDone',
+            scriptEvent: jsEndPageCommand
+          });
+          return;
+        } catch (error) {
+          console.error('[ProcessingWorker] [SUBMISSION_TRACKING] Error calling Python render_end_page() from void payload, falling back to JavaScript:', error);
+          
+          // Fallback: Create end page with donation status set to false
+          const endPageCommand = {
+            __type__: 'CommandUIRender',
+            page: {
+              __type__: 'PropsUIPageEnd',
+              locale: 'en',
+              info: lastEventInfo,
+              donated: false  // Default to false when we can't determine from Python
+            }
+          };
+          
+          console.log('[ProcessingWorker] Created fallback end page command:', endPageCommand);
+          
+          // Update state to end_page in Python
+          self.pyodide.runPython(`
+            old_state = py_script._current_state
+            py_script._current_state = 'end_page'
+            print("State transition:", old_state, "->", "end_page")
+          `);
+          
+          console.log('[ProcessingWorker] State transition:', currentState, '->', 'end_page');
+          
+          // Send the fallback end page command back to the main thread
+          self.postMessage({
+            eventType: 'runCycleDone',
+            scriptEvent: endPageCommand
+          });
+          return;
+        }
       }
       
       // Original file input logic (only execute if we didn't show end page)
@@ -323,9 +361,9 @@ function runCycle(payload) {
     // Store the last event type for context in the next cycle
     self.lastEventType = eventType;
     
-    // Special handling for CommandSystemExit - immediately transition to end page
+    // Special handling for CommandSystemExit - let Python handle the end page creation
     if (eventType === 'CommandSystemExit') {
-      console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Handling exit command, transitioning to end page');
+      console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Handling exit command, letting Python create end page');
       
       // Extract submission info if available
       const exitCode = scriptEvent.get('code');
@@ -341,34 +379,68 @@ function runCycle(payload) {
       self.lastEventInfo = exitInfo;
       console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Stored exit info for later use:', exitInfo);
       
-      // Create end page command
-      const endPageCommand = {
-        __type__: 'CommandUIRender',
-        page: {
-          __type__: 'PropsUIPageEnd',
-          locale: 'en',
-          info: exitInfo
-        }
-      };
-      
-      console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Created end page command with info:', exitInfo);
-      
-      // Update state to end_page in Python
-      self.pyodide.runPython(`
-        old_state = py_script._current_state
-        py_script._current_state = 'end_page'
-        print("State transition:", old_state, "->", "end_page")
-      `);
-      
-      console.log('[ProcessingWorker] State transition:', currentState, '->', 'end_page');
-      
-      // Send the end page command back to the main thread
-      console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Sending end page command to main thread');
-      self.postMessage({
-        eventType: 'runCycleDone',
-        scriptEvent: endPageCommand
-      });
-      return;
+      // Let Python's render_end_page() function handle the end page creation
+      // This ensures donation status is properly tracked
+      try {
+        console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Calling Python render_end_page()');
+        const endPageCommand = self.pyodide.runPython(`
+          # Import the render_end_page function and call it
+          from script import render_end_page
+          end_page_cmd = render_end_page()
+          end_page_cmd.toDict()
+        `);
+        
+        console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Python created end page command:', endPageCommand);
+        
+        // Update state to end_page in Python
+        self.pyodide.runPython(`
+          old_state = py_script._current_state
+          py_script._current_state = 'end_page'
+          print("State transition:", old_state, "->", "end_page")
+        `);
+        
+        console.log('[ProcessingWorker] State transition:', currentState, '->', 'end_page');
+        
+        // Send the Python-generated end page command back to the main thread
+        console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Sending Python-generated end page command to main thread');
+        self.postMessage({
+          eventType: 'runCycleDone',
+          scriptEvent: endPageCommand
+        });
+        return;
+      } catch (error) {
+        console.error('[ProcessingWorker] [SUBMISSION_TRACKING] Error calling Python render_end_page(), falling back to JavaScript:', error);
+        
+        // Fallback to JavaScript-generated end page if Python fails
+        const endPageCommand = {
+          __type__: 'CommandUIRender',
+          page: {
+            __type__: 'PropsUIPageEnd',
+            locale: 'en',
+            info: exitInfo,
+            donated: false  // Default to false when we can't determine from Python
+          }
+        };
+        
+        console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Created fallback end page command with info:', exitInfo);
+        
+        // Update state to end_page in Python
+        self.pyodide.runPython(`
+          old_state = py_script._current_state
+          py_script._current_state = 'end_page'
+          print("State transition:", old_state, "->", "end_page")
+        `);
+        
+        console.log('[ProcessingWorker] State transition:', currentState, '->', 'end_page');
+        
+        // Send the fallback end page command back to the main thread
+        console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Sending fallback end page command to main thread');
+        self.postMessage({
+          eventType: 'runCycleDone',
+          scriptEvent: endPageCommand
+        });
+        return;
+      }
     }
     
     // Detailed logging for UI render commands

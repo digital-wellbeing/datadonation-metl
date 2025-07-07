@@ -102,13 +102,18 @@ export default class FakeBridge implements Bridge {
       console.log(`[FakeBridge] [SUBMISSION_TRACKING] ${platform} data saved successfully to Supabase`);
       console.log('[FakeBridge] [SUBMISSION_TRACKING] Database insert completed with submission ID:', window.submissionId);
       
-      // After successful save, exit with submission ID
+      // After successful save, exit with submission ID and donation status
       const exitInfo = window.submissionId?.toString() || 'unknown';
       if (!window.submissionId) {
         console.error('[FakeBridge] [SUBMISSION_TRACKING] ERROR: No submission ID available for exit command!');
       }
       
       console.log('[FakeBridge] [SUBMISSION_TRACKING] Preparing exit with submission ID info:', exitInfo);
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] User donated successfully, setting donation status to true');
+      
+      // Set global donation status for the worker to use
+      (globalThis as any).userDonated = true;
+      
       this.handleExit({
         __type__: 'CommandSystemExit',
         code: 0,

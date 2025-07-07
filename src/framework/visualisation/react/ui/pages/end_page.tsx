@@ -14,7 +14,7 @@ type Props = Weak<PropsUIPageEnd> & ReactFactoryContext & {
 
 export const EndPage = (props: Props): JSX.Element => {
   const { title, text, errorMessage } = prepareCopy(props)
-  const { resolve, locale } = props
+  const { resolve, locale, donated } = props
   const submissionId = String(props.info || window.submissionId || '')
 
   // Enhanced logging for submission ID tracking
@@ -23,17 +23,20 @@ export const EndPage = (props: Props): JSX.Element => {
     windowSubmissionId: window.submissionId,
     finalSubmissionId: submissionId,
     hasSubmissionId: !!submissionId,
+    donated: donated,
     timestamp: new Date().toISOString()
   });
 
-  // Log error if submission ID is missing
-  if (!submissionId) {
-    console.error('[EndPage] [SUBMISSION_TRACKING] ERROR: Submission ID is missing!');
+  // Log error if submission ID is missing but user donated
+  if (!submissionId && donated) {
+    console.error('[EndPage] [SUBMISSION_TRACKING] ERROR: Submission ID is missing but user donated!');
     console.error('[EndPage] [SUBMISSION_TRACKING] Props.info:', props.info);
     console.error('[EndPage] [SUBMISSION_TRACKING] window.submissionId:', window.submissionId);
     console.error('[EndPage] [SUBMISSION_TRACKING] This indicates the donation process may not have completed successfully');
-  } else {
-    console.log('[EndPage] [SUBMISSION_TRACKING] SUCCESS: Submission ID found:', submissionId);
+  } else if (submissionId && donated) {
+    console.log('[EndPage] [SUBMISSION_TRACKING] SUCCESS: Submission ID found and user donated:', submissionId);
+  } else if (!donated) {
+    console.log('[EndPage] [SUBMISSION_TRACKING] User declined donation, submission ID not needed');
   }
 
   // Resolve with PayloadVoid when component mounts
@@ -47,18 +50,18 @@ export const EndPage = (props: Props): JSX.Element => {
     <>
       <Title1 text={title} />
       <BodyLarge text={text} />
-      {submissionId ? (
+      {donated && submissionId ? (
         <div className="mt-6">
           <CopyButton 
             textToCopy={submissionId} 
             locale={locale} 
           />
         </div>
-      ) : (
+      ) : donated && !submissionId ? (
         <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
           <BodyLarge text={errorMessage} color="text-red-600" />
         </div>
-      )}
+      ) : null}
     </>
   )
 

@@ -16,6 +16,8 @@ from datetime import datetime
 
 # Global variable to store the last donation ID
 last_donation_id = None
+# Global variable to track if user donated
+user_donated = False
 
 # Enable debug mode
 DEBUG = True
@@ -85,6 +87,7 @@ def load_json(path):
 def extract_file(zipfile_ref, filename):
     try:
         # make it slow for demo reasons only
+        import time
         time.sleep(1)
         info = zipfile_ref.getinfo(filename)
         return (filename, info.compress_size, info.file_size)
@@ -92,40 +95,47 @@ def extract_file(zipfile_ref, filename):
         return "invalid"
 
 def extract_id(jsonfile):
-    try:
-        # Check if this is ActivityWatch data by looking for 'buckets' key
-        if 'buckets' in jsonfile:
-            # This is ActivityWatch data, use the ActivityWatch ID extraction
-            return extract_activitywatch_id(jsonfile)
-            
-        # This is TikTok data, proceed with normal extraction
-        username = jsonfile.get('Profile', {}).get('Profile Information', {}).get('ProfileMap').get('userName', [])
-        username = hash_username(username)
+    print(">>> in extract_id(), jsonfile type:", type(jsonfile), "keys (if dict):", (list(jsonfile.keys()) if isinstance(jsonfile, dict) else None))
+    # First path (old format):
+    profile = jsonfile.get('Profile', {}) or {}
+    profile_info = profile.get('Profile Information', {}) or {}
+    profile_map = profile_info.get('ProfileMap', {}) or {}
+    username = profile_map.get('userName')
+    print("After first path, username =", repr(username))
 
-    except Exception as e:
-        print(f"Error extracting ID: {e}")
-        # Provide a fallback username in case of error
-        username = hash_username(f"error-extraction-{datetime.now().isoformat()}")
+    if not username:
+        # Second path (new format):
+        alt_info = profile.get('Profile Info', {}) or {}
+        alt_map = alt_info.get('ProfileMap', {}) or {}
+        username = alt_map.get('userName')
+        print("After second path, username =", repr(username))
+
+    if not username:
+        print("Error extracting ID: Username not found in either 'Profile Information' or 'Profile Info'.")
+    else:
+        print("Found username:", username)
+    
+    hashed_username = hash_username(username) if username else None
 
     return ExtractionResult(
         "id",
-        props.Translatable({"en": "Your Random ID", "nl": "Your Random ID"}),
-        pd.DataFrame([username])
+        props.Translatable({"en": "Unique Identifier (note: deleting this will invalidate your submission)", "nl": "Unique Identifier (note: deleting this will invalidate your submission)"}),
+        pd.DataFrame([hashed_username])
     )
 
 def extract_likes(jsonfile):
-
     like_list = []
     print('Trying to extract likes...')
 
     try:
-
-        # Extract the "Like List"
-        item_favorite_list = jsonfile.get('Activity', {}).get('Like List', {}).get('ItemFavoriteList', [])
+        # Extract the "Like List" - handle both old and new formats
+        activity_root = jsonfile.get("Activity") or jsonfile.get("Your Activity") or {}
+        item_favorite_list = activity_root.get('Like List', {}).get('ItemFavoriteList', [])
 
         for idx, item in enumerate(item_favorite_list):
-            date = item.get('Date', '')
-            link = item.get('Link', '')
+            item_lower = {k.lower(): v for k, v in item.items()}
+            date = item_lower.get('date', '')
+            link = item_lower.get('link', '')
             if date and link:
                 like_list.append({'Date': date, 'Link': link})
             else:
@@ -143,25 +153,25 @@ def extract_likes(jsonfile):
 
 
 def extract_watch_history(jsonfile):
-
     watch_history_list = []
-    print('Trying to extract likes...')
+    print('Trying to extract watch history...')
 
     try:
-
-        # Extract the "VideoList"
-        json_videos = jsonfile.get('Activity', {}).get('Video Browsing History', {}).get('VideoList', [])
+        # Extract the "VideoList" - handle both old and new formats
+        activity_root = jsonfile.get("Activity") or jsonfile.get("Your Activity") or {}
+        browsing_root = activity_root.get('Video Browsing History') or activity_root.get('Watch History') or {}
+        json_videos = browsing_root.get('VideoList', []) if isinstance(browsing_root, dict) else browsing_root
 
         for idx, item in enumerate(json_videos):
-            date = item.get('Date', '')
-            link = item.get('Link', '')
+            date = item.get('Date') or item.get('date', '')
+            link = item.get('Link') or item.get('link', '')
             if date and link:
                 watch_history_list.append({'Date': date, 'Link': link})
             else:
-                print(f"Like {idx+1} is missing 'Date' or 'Link'. Skipping.")
+                print(f"Watch history item {idx+1} is missing 'Date' or 'Link'. Skipping.")
 
     except Exception as e:
-        print(f"Error extracting Like List: {e}")
+        print(f"Error extracting Watch History: {e}")
 
     print(f"Total videos extracted: {len(watch_history_list)}")
     return ExtractionResult(
@@ -175,12 +185,12 @@ def extract_logins(jsonfile):
     print('Trying to extract logins...')
 
     try:
-
-        # Extract the "VideoList"
-        json_videos = jsonfile.get('Activity', {}).get('Login History', {}).get('LoginHistoryList', [])
+        # Extract the "LoginHistoryList" - handle both old and new formats
+        activity_root = jsonfile.get("Activity") or jsonfile.get("Your Activity") or {}
+        json_videos = activity_root.get('Login History', {}).get('LoginHistoryList', [])
 
         for idx, item in enumerate(json_videos):
-            date = item.get('Date', '')
+            date = item.get('Date') or item.get('date', '')
             device = item.get('DeviceModel', '')
             network = item.get('NetworkType', '')
             
@@ -189,7 +199,7 @@ def extract_logins(jsonfile):
                                     'Device': device, 
                                     'Network': network})
             else:
-                print(f"Like {idx+1} is missing 'Date' or 'Device'. Skipping.")
+                print(f"Login {idx+1} is missing 'Date' or 'Device'. Skipping.")
 
     except Exception as e:
         print(f"Error extracting Login List: {e}")
@@ -203,7 +213,7 @@ def extract_logins(jsonfile):
 
 def extract_video_uploads(jsonfile):
     uploads_list = []
-    print('Trying to extract logins...')
+    print('Trying to extract video uploads...')
 
     try:
         # Extract the "VideoList"
@@ -250,11 +260,13 @@ def extract_purchases(jsonfile):
     print('Trying to extract purchases...')
 
     try:
-        # Extract the "VideoList"
-        json_gifts = jsonfile.get('Activity', {}).get('Purchase History', {}).get('BuyGifts', [])
+        # Extract the "Purchase History" - handle both old and new formats
+        activity_root = jsonfile.get("Activity") or jsonfile.get("Your Activity") or {}
+        purchase_root = activity_root.get('Purchase History', {}) or activity_root.get('Purchases', {})
+        json_gifts = purchase_root.get('BuyGifts', [])
 
         for idx, item in enumerate(json_gifts):
-            date = item.get('Date', '')
+            date = item.get('Date') or item.get('date', '')
             value = item.get('Value', '')
             if date and value:
                 gifts_list.append({'Date': date, 'Value': value})
@@ -849,12 +861,12 @@ def extract_data(path, platform='TikTok'):
         
         # If not ActivityWatch, use TikTok extractors
         extractors = [
-            extract_id,
             extract_likes,
             extract_watch_history,
             extract_logins,
             extract_video_uploads,
-            extract_purchases
+            extract_purchases,
+            extract_id
         ]
 
         # Save the file first
@@ -1107,8 +1119,8 @@ class DataDonationProcessor:
         if all_empty_or_minimal:
             # Add a warning message for empty/minimal data
             warning_text = {
-                "en": f"⚠️ WARNING: None of the extractions were successful. The file may be empty, corrupted, or in an incorrect format. Please check your file and make sure it contains the expected {self.platform} data.\n\nDetermine whether you would like to donate the data below. Carefully check the data and adjust when required. With your donation you contribute to the previously described research. Thank you in advance.",
-                "nl": f"⚠️ WAARSCHUWING: Geen van de extracties was succesvol. Het bestand is mogelijk leeg, beschadigd of heeft een onjuist formaat. Controleer uw bestand en zorg ervoor dat het de verwachte {self.platform}-gegevens bevat.\n\nBepaal of u de onderstaande gegevens wilt doneren. Bekijk de gegevens zorgvuldig en pas zo nodig aan. Met uw donatie draagt u bij aan het eerder beschreven onderzoek. Alvast hartelijk dank."
+                "en": f"⚠️ WARNING: None of the extractions were successful. The file may be empty, corrupted, or in an incorrect format. Please check your file and make sure it contains the expected {self.platform} data.",
+                "nl": f"⚠️ WAARSCHUWING: Geen van de extracties was succesvol. Het bestand is mogelijk leeg, beschadigd of heeft een onjuist formaat. Controleer uw bestand en zorg ervoor dat het de verwachte {self.platform}-gegevens bevat."
             }
             description = props.Translatable(warning_text)
             self.log(f"Warning added: Empty or minimal data detected in {self.platform} file")
@@ -1120,7 +1132,7 @@ class DataDonationProcessor:
         self.log(f"prompt consent")
         
         # Create the consent form with the description (warning if needed)
-        consent_form = props.PropsUIPromptConsentForm(tables, [meta_table], description)
+        consent_form = props.PropsUIPromptConsentForm(tables, [meta_table], description, validation_failed=all_empty_or_minimal)
         
         consent_result = yield render_donation_page(
             self.platform,
@@ -1128,14 +1140,17 @@ class DataDonationProcessor:
             self.progress,
         )
 
+        global user_donated  # Declare global at the top of the function
         self.log(f"Consent result type: {consent_result.__type__}")
         debug_log(f"Consent result type: {consent_result.__type__}")
         
         if consent_result.__type__ == "PayloadJSON":
-            donation_id = f"{self.session_id}-{self.platform}"
+            user_donated = True  # Set donation status when PayloadJSON is received
+            donation_id = str(self.session_id)
             self.log(f"trying to donate consent data with ID: {donation_id}")
             debug_log(f"[DONATION_TRACKING] Creating donation ID: {donation_id}")
             debug_log(f"[DONATION_TRACKING] Session ID: {self.session_id}, Platform: {self.platform}")
+            debug_log(f"[DONATION_TRACKING] Set user_donated to: {user_donated} (PayloadJSON received)")
             
             # We don't need global here, as donate() will handle setting the global variable
             try:
@@ -1150,7 +1165,9 @@ class DataDonationProcessor:
             debug_log("Consent process completed")
             return
         else:
+            user_donated = False
             debug_log(f"Consent not given, result type was {consent_result.__type__}")
+            debug_log(f"[DONATION_TRACKING] Set user_donated to: {user_donated}")
 
 
 class DataDonation:
@@ -1182,32 +1199,46 @@ def process(session_id):
     debug_log("Donation tracking completed")
     
     # Set a default last_donation_id at the beginning
-    last_donation_id = f"{session_id}-init"
+    last_donation_id = None  # Will be set to session_id when user actually donates
     debug_log(f"Set initial donation ID: {last_donation_id}")
     
     # Correctly access the platform from the global py_script object
     import sys
-    platform = 'TikTok'  # Default fallback
+    platform = 'ActivityWatch'  # Default fallback - this is likely ActivityWatch data donation
     
     # The platform is set on the py_script object in JavaScript, not on the process function
     try:
+        debug_log(f"Global variables available: {list(globals().keys())}")
         # Try to access the platform from the calling object (py_script)
         # We can use 'platform' attribute if it exists in the global scope
         if 'platform' in globals():
             platform = globals()['platform']
             debug_log(f"Using platform from globals: {platform}")
         else:
+            debug_log("Platform not found in globals")
             # Use the __builtins__.get method to access global variables
             import builtins
             module = sys.modules.get('__main__')
-            if hasattr(module, 'py_script') and hasattr(module.py_script, 'platform'):
-                platform = module.py_script.platform
-                debug_log(f"Using platform from py_script: {platform}")
+            debug_log(f"Module: {module}")
+            if hasattr(module, 'py_script'):
+                debug_log(f"py_script found in module, attributes: {dir(module.py_script) if hasattr(module, 'py_script') else 'None'}")
+                if hasattr(module.py_script, 'platform'):
+                    platform = module.py_script.platform
+                    debug_log(f"Using platform from py_script: {platform}")
+                else:
+                    debug_log("py_script found but no platform attribute")
+                    # Default to ActivityWatch instead of TikTok since this is the expected case
+                    platform = 'ActivityWatch'
             else:
-                debug_log("Could not find platform attribute in py_script, defaulting to TikTok")
+                debug_log("Could not find py_script in module, defaulting to ActivityWatch")
+                # Default to ActivityWatch instead of TikTok since this is the expected case
+                platform = 'ActivityWatch'
     except Exception as e:
         debug_log(f"Error accessing platform: {str(e)}")
-        debug_log("Defaulting to TikTok")
+        import traceback
+        debug_log(f"Traceback: {traceback.format_exc()}")
+        debug_log("Defaulting to ActivityWatch")
+        platform = 'ActivityWatch'
     
     debug_log(f"Final platform value: {platform}")
     
@@ -1236,32 +1267,40 @@ def process(session_id):
         import traceback
         traceback.print_exc()
     
-    # Ensure we have a valid donation ID before showing the end page
-    if not last_donation_id or last_donation_id == f"{session_id}-init":
-        debug_log("No donation ID was set during the process, using platform-based fallback")
-        # If no donation ID was set during the process, use a fallback with platform
-        last_donation_id = f"{session_id}-{platform}-fallback"
+    # Ensure we have a valid donation ID before showing the end page, but only if user donated
+    if user_donated and not last_donation_id:
+        debug_log("User donated but no donation ID was set during the process, using numeric fallback")
+        # If user donated but no donation ID was set during the process, use a numeric fallback
+        last_donation_id = str(session_id)
+        debug_log(f"[DONATION_TRACKING] Set fallback donation ID: {last_donation_id}")
+    elif not user_donated:
+        debug_log("User declined donation, clearing any existing donation ID")
+        last_donation_id = None
     
     debug_log(f"Final donation ID for end page: {last_donation_id}")
     debug_log("Rendering end page")
     yield render_end_page()
 
 def render_end_page():
-    global last_donation_id
+    global last_donation_id, user_donated
     print("arrived at render_end_page()")
-    # Create end page with submission ID
+    # Create end page with submission ID and donation status
     debug_log(f"[DONATION_TRACKING] Rendering end page with donation ID: {last_donation_id}")
+    debug_log(f"[DONATION_TRACKING] User donated: {user_donated}")
     debug_log(f"[DONATION_TRACKING] End page submission ID type: {type(last_donation_id)}")
     
-    # If last_donation_id is None or empty, set a default value
-    if not last_donation_id:
-        debug_log("[DONATION_TRACKING] Warning: No donation ID was set, using a default value")
+    # Only set a default value if the user donated but ID is missing
+    if user_donated and not last_donation_id:
+        debug_log("[DONATION_TRACKING] Warning: User donated but no donation ID was set, using a default value")
         last_donation_id = "default-submission-id"
         debug_log(f"[DONATION_TRACKING] Set fallback donation ID: {last_donation_id}")
+    elif not user_donated:
+        debug_log("[DONATION_TRACKING] User declined donation, no submission ID needed")
+        last_donation_id = None
         
     debug_log(f"[DONATION_TRACKING] Final donation ID for end page: {last_donation_id}")
-    page = props.PropsUIPageEnd(last_donation_id)
-    debug_log(f"[DONATION_TRACKING] Created PropsUIPageEnd with submission_id: {last_donation_id}")
+    page = props.PropsUIPageEnd(last_donation_id, user_donated)
+    debug_log(f"[DONATION_TRACKING] Created PropsUIPageEnd with submission_id: {last_donation_id}, donated: {user_donated}")
     return CommandUIRender(page)
 
 def render_splash_pace():
@@ -1302,14 +1341,32 @@ def prompt_consent(id, data, meta_data):
 
 
 def donate(key, json_string):
-    global last_donation_id
+    global last_donation_id, user_donated
     print(f"arrived at donate() with key: {key}")
     debug_log(f"[DONATION_TRACKING] Setting donation ID: {key}")
     debug_log(f"[DONATION_TRACKING] Previous donation ID was: {last_donation_id}")
     # Store the donation key for later use in the end page
     last_donation_id = key
+    user_donated = True
     debug_log(f"[DONATION_TRACKING] Updated donation ID to: {last_donation_id}")
+    debug_log(f"[DONATION_TRACKING] Set user_donated to: {user_donated}")
     return CommandSystemDonate(key, json_string)
+
+
+# main function to extract all various data from the JSON file
+def extract_data_tiktok(path):
+    print('started extracting data')
+    extractors = [
+        extract_likes,
+        extract_watch_history,
+        extract_logins,
+        extract_video_uploads,
+        extract_purchases,
+        extract_id
+    ]
+    print(f"Extracting data from {path}")
+    jsonfile = load_json(path)
+    return [extractor(jsonfile) for extractor in extractors]
 
 
 if __name__ == "__main__":

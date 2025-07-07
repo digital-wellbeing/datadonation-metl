@@ -59,6 +59,7 @@ export interface PropsUIPromptConsentForm {
   donateButton?: Text
   tables: PropsUIPromptConsentFormTable[]
   metaTables: PropsUIPromptConsentFormTable[]
+  validationFailed?: boolean
 }
 export function isPropsUIPromptConsentForm (arg: any): arg is PropsUIPromptConsentForm {
   return isInstanceOf<PropsUIPromptConsentForm>(arg, 'PropsUIPromptConsentForm', ['tables', 'metaTables'])
