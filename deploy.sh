@@ -2,6 +2,15 @@
 
 echo "🔄 Starting rebuild and deployment..."
 
+# Build Python wheel first
+echo "🐍 Building Python wheel..."
+npm run build:py
+
+if [ $? -ne 0 ]; then
+    echo "❌ Python build failed!"
+    exit 1
+fi
+
 # Build the React app
 echo "📦 Building React app..."
 npm run build:app

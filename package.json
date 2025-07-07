@@ -31,7 +31,7 @@
     "lint:json": "jsonlint package.json vercel.json",
     "clean": "rm -rf ./build",
     "build:css": "NODE_ENV=production tailwindcss build -i ./src/framework/styles.css -o ./build/styles.css --minify",
-    "build:wheel": "cd src/framework/processing/py && python3 -m pip install --user poetry && python3 -m poetry build --format wheel",
+    "build:wheel": "cd src/framework/processing/py && /home/tamas/.local/bin/poetry build --format wheel",
     "build:install-wheel": "cp -R src/framework/processing/py/dist/. ./public",
     "build:py": "if command -v python3 &> /dev/null; then npm run build:wheel && npm run build:install-wheel; else echo 'Python 3 not found. Please install Python 3.'; fi",
     "build:app": "react-scripts build",
