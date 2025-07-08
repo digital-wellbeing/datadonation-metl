@@ -15,7 +15,7 @@ type Props = Weak<PropsUIPageEnd> & ReactFactoryContext & {
 export const EndPage = (props: Props): JSX.Element => {
   const { title, text, errorMessage } = prepareCopy(props)
   const { resolve, locale, donated } = props
-  const submissionId = String(props.info || window.submissionId || '')
+  const submissionId = String(window.submissionId || props.info || '')
 
   // Enhanced logging for submission ID tracking
   console.log('[EndPage] [SUBMISSION_TRACKING] EndPage component rendered with props:', {

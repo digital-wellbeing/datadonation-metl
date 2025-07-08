@@ -89,7 +89,7 @@ export default class FakeBridge implements Bridge {
         .from('uploads')
         .insert({
           json_data: data.filter((item: DataItem) => item.id !== 'metadata'),  // Remove metadata from stored data
-          submission_id: window.submissionId,
+          submission_id: window.submissionId,  // Use the frontend-generated submission ID
           platform: platform,
           // created_at will be automatically set by Supabase
         });
@@ -108,8 +108,9 @@ export default class FakeBridge implements Bridge {
         console.error('[FakeBridge] [SUBMISSION_TRACKING] ERROR: No submission ID available for exit command!');
       }
       
-      console.log('[FakeBridge] [SUBMISSION_TRACKING] Preparing exit with submission ID info:', exitInfo);
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] Preparing exit with frontend submission ID info:', exitInfo);
       console.log('[FakeBridge] [SUBMISSION_TRACKING] User donated successfully, setting donation status to true');
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] ✅ SUCCESS: Frontend and database now use the same ID:', window.submissionId);
       
       // Set global donation status for the worker to use
       (globalThis as any).userDonated = true;

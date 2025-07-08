@@ -1146,7 +1146,7 @@ class DataDonationProcessor:
         
         if consent_result.__type__ == "PayloadJSON":
             user_donated = True  # Set donation status when PayloadJSON is received
-            donation_id = str(self.session_id)
+            donation_id = f"{self.session_id}-{self.platform}"
             self.log(f"trying to donate consent data with ID: {donation_id}")
             debug_log(f"[DONATION_TRACKING] Creating donation ID: {donation_id}")
             debug_log(f"[DONATION_TRACKING] Session ID: {self.session_id}, Platform: {self.platform}")
@@ -1298,9 +1298,16 @@ def render_end_page():
         debug_log("[DONATION_TRACKING] User declined donation, no submission ID needed")
         last_donation_id = None
         
-    debug_log(f"[DONATION_TRACKING] Final donation ID for end page: {last_donation_id}")
-    page = props.PropsUIPageEnd(last_donation_id, user_donated)
-    debug_log(f"[DONATION_TRACKING] Created PropsUIPageEnd with submission_id: {last_donation_id}, donated: {user_donated}")
+    # Strip platform suffix from donation ID before showing to user
+    display_submission_id = last_donation_id
+    if last_donation_id and user_donated and '-' in str(last_donation_id):
+        # Remove platform suffix (e.g., "12345-TikTok" -> "12345")
+        display_submission_id = str(last_donation_id).split('-')[0]
+        debug_log(f"[DONATION_TRACKING] Stripped platform suffix: {last_donation_id} -> {display_submission_id}")
+        
+    debug_log(f"[DONATION_TRACKING] Final donation ID for end page: {display_submission_id}")
+    page = props.PropsUIPageEnd(display_submission_id, user_donated)
+    debug_log(f"[DONATION_TRACKING] Created PropsUIPageEnd with submission_id: {display_submission_id}, donated: {user_donated}")
     return CommandUIRender(page)
 
 def render_splash_pace():
