@@ -13,9 +13,12 @@ type Props = Weak<PropsUIPageEnd> & ReactFactoryContext & {
 }
 
 export const EndPage = (props: Props): JSX.Element => {
-  const { title, text, errorMessage } = prepareCopy(props)
+  const { title, text, errorMessage, submissionIssueTitle, submissionIssueText } = prepareCopy(props)
   const { resolve, locale, donated } = props
   const submissionId = String(window.submissionId || props.info || '')
+  
+  // Use React state to track submission error changes
+  const [submissionError, setSubmissionError] = React.useState(window.submissionError)
 
   // Enhanced logging for submission ID tracking
   console.log('[EndPage] [SUBMISSION_TRACKING] EndPage component rendered with props:', {
@@ -24,6 +27,7 @@ export const EndPage = (props: Props): JSX.Element => {
     finalSubmissionId: submissionId,
     hasSubmissionId: !!submissionId,
     donated: donated,
+    submissionError: submissionError,
     timestamp: new Date().toISOString()
   });
 
@@ -39,6 +43,24 @@ export const EndPage = (props: Props): JSX.Element => {
     console.log('[EndPage] [SUBMISSION_TRACKING] User declined donation, submission ID not needed');
   }
 
+  // Monitor window.submissionError changes
+  React.useEffect(() => {
+    const checkForError = () => {
+      if (window.submissionError !== submissionError) {
+        console.log('[EndPage] [ERROR_TRACKING] Submission error detected:', window.submissionError);
+        setSubmissionError(window.submissionError);
+      }
+    };
+    
+    // Check immediately
+    checkForError();
+    
+    // Set up interval to check for changes
+    const interval = setInterval(checkForError, 100);
+    
+    return () => clearInterval(interval);
+  }, [submissionError]);
+
   // Resolve with PayloadVoid when component mounts
   React.useEffect(() => {
     if (resolve) {
@@ -50,7 +72,17 @@ export const EndPage = (props: Props): JSX.Element => {
     <>
       <Title1 text={title} />
       <BodyLarge text={text} />
-      {donated && submissionId ? (
+      {donated && submissionError ? (
+        <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <Title1 text={submissionIssueTitle} color="text-red-600" />
+          <BodyLarge text={submissionIssueText} color="text-red-600" />
+          <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded font-mono text-sm">
+            <div><strong>Database Error:</strong></div>
+            <div>{submissionError.message}</div>
+            <div className="mt-2"><strong>Timestamp:</strong> {submissionError.timestamp}</div>
+          </div>
+        </div>
+      ) : donated && submissionId ? (
         <div className="mt-6">
           <CopyButton 
             textToCopy={submissionId} 
@@ -76,13 +108,17 @@ interface Copy {
   title: string
   text: string
   errorMessage: string
+  submissionIssueTitle: string
+  submissionIssueText: string
 }
 
 function prepareCopy ({ locale }: Props): Copy {
   return {
     title: Translator.translate(title, locale),
     text: Translator.translate(text, locale),
-    errorMessage: Translator.translate(errorMessage, locale)
+    errorMessage: Translator.translate(errorMessage, locale),
+    submissionIssueTitle: Translator.translate(submissionIssueTitle, locale),
+    submissionIssueText: Translator.translate(submissionIssueText, locale)
   }
 }
 
@@ -100,3 +136,13 @@ const errorMessage = new TextBundle()
   .add('en', 'Error: Submission ID is missing. Please contact support.')
   .add('de', 'Fehler: Einreichungs-ID fehlt. Bitte versuchen Sie, Ihre Daten erneut zu übermitteln.')
   .add('nl', 'Fout: Inzending-ID ontbreekt. Probeer uw gegevens opnieuw in te dienen.')
+
+const submissionIssueTitle = new TextBundle()
+  .add('en', 'Submission Issue')
+  .add('de', 'Einreichungsproblem')
+  .add('nl', 'Inzendingsprobleem')
+
+const submissionIssueText = new TextBundle()
+  .add('en', 'There was an issue processing your data donation. The data may not have been saved properly. Please contact the researchers for assistance.')
+  .add('de', 'Es gab ein Problem bei der Verarbeitung Ihrer Datenspende. Die Daten wurden möglicherweise nicht ordnungsgemäß gespeichert. Bitte wenden Sie sich an die Forscher für Unterstützung.')
+  .add('nl', 'Er was een probleem bij het verwerken van uw gegevensspende. De gegevens zijn mogelijk niet correct opgeslagen. Neem contact op met de onderzoekers voor hulp.')

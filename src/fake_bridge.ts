@@ -5,6 +5,11 @@ import { supabase } from './utils/supabase';
 declare global {
   interface Window {
     submissionId: number | undefined;
+    submissionError: {
+      message: string;
+      code: string;
+      timestamp: string;
+    } | undefined;
   }
 }
 
@@ -96,6 +101,21 @@ export default class FakeBridge implements Bridge {
 
       if (error) {
         console.error('[FakeBridge] [SUBMISSION_TRACKING] Database insert failed:', error);
+        
+        // Store error information in window for end page to access
+        window.submissionError = {
+          message: error.message,
+          code: error.code || 'unknown',
+          timestamp: new Date().toLocaleString('en-GB', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          })
+        };
+        
         throw error;
       }
 

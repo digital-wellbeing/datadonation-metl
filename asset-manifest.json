@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.c514c5cb.css",
-    "main.js": "/static/js/main.33a676cd.js",
+    "main.css": "/static/css/main.e2869f91.css",
+    "main.js": "/static/js/main.c1ac0b63.js",
     "static/js/198.6da0e530.chunk.js": "/static/js/198.6da0e530.chunk.js",
     "static/media/Finador-BlackOblique.woff": "/static/media/Finador-BlackOblique.8e3feb4617564028ac09.woff",
     "static/media/Finador-RegularOblique.woff": "/static/media/Finador-RegularOblique.66b1b40866f3f75015d6.woff",
@@ -44,12 +44,12 @@
     "static/media/back.svg": "/static/media/back.da58add26f133b17074fc3c8bc19b1d4.svg",
     "static/media/check.svg": "/static/media/check.62d1e3846cf9f4002c37c986555f222e.svg",
     "static/media/radio.svg": "/static/media/radio.a8976f7cd2094465a9e60270572060bb.svg",
-    "main.c514c5cb.css.map": "/static/css/main.c514c5cb.css.map",
-    "main.33a676cd.js.map": "/static/js/main.33a676cd.js.map",
+    "main.e2869f91.css.map": "/static/css/main.e2869f91.css.map",
+    "main.c1ac0b63.js.map": "/static/js/main.c1ac0b63.js.map",
     "198.6da0e530.chunk.js.map": "/static/js/198.6da0e530.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.c514c5cb.css",
-    "static/js/main.33a676cd.js"
+    "static/css/main.e2869f91.css",
+    "static/js/main.c1ac0b63.js"
   ]
 }
