@@ -63,4 +63,4 @@ mcp.json
 *.swp
 *.ts
 
-tests/300mb.json
+tests/

@@ -24,6 +24,72 @@ onmessage = (event) => {
       self.lastEventInfo = exitInfo;
       break
 
+    case 'showEndPage':
+      // Trigger end page rendering after database operation completes
+      console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Received showEndPage event, rendering end page');
+      try {
+        console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Calling Python render_end_page() from showEndPage handler');
+        const endPageCommand = self.pyodide.runPython(`
+          # Import and call the render_end_page function directly from the script module
+          from port.script import render_end_page
+          end_page_cmd = render_end_page()
+          end_page_cmd.toDict() if hasattr(end_page_cmd, 'toDict') else end_page_cmd
+        `);
+        
+        console.log('[ProcessingWorker] [SUBMISSION_TRACKING] Python created end page command from showEndPage:', endPageCommand);
+        
+        // Convert Python object to JavaScript object
+        const jsEndPageCommand = endPageCommand.toJs({
+          create_proxies: false,
+          dict_converter: Object.fromEntries
+        });
+        
+        // Update state to end_page in Python
+        self.pyodide.runPython(`
+          old_state = py_script._current_state
+          py_script._current_state = 'end_page'
+          print("State transition:", old_state, "->", "end_page")
+        `);
+        
+        console.log('[ProcessingWorker] State transition to end_page from showEndPage');
+        
+        // Send the converted JavaScript end page command back to the main thread
+        self.postMessage({
+          eventType: 'runCycleDone',
+          scriptEvent: jsEndPageCommand
+        });
+        
+      } catch (error) {
+        console.error('[ProcessingWorker] [SUBMISSION_TRACKING] Error calling Python render_end_page() from showEndPage:', error);
+        
+        // Fallback: Create end page with donation status
+        const endPageCommand = {
+          __type__: 'CommandUIRender',
+          page: {
+            __type__: 'PropsUIPageEnd',
+            locale: 'en',
+            info: self.lastEventInfo || '',
+            donated: !!self.lastEventInfo  // If we have exit info, assume donation was attempted
+          }
+        };
+        
+        console.log('[ProcessingWorker] Created fallback end page command from showEndPage:', endPageCommand);
+        
+        // Update state to end_page in Python
+        self.pyodide.runPython(`
+          old_state = py_script._current_state
+          py_script._current_state = 'end_page'
+          print("State transition:", old_state, "->", "end_page")
+        `);
+        
+        // Send the fallback end page command back to the main thread
+        self.postMessage({
+          eventType: 'runCycleDone',
+          scriptEvent: endPageCommand
+        });
+      }
+      break
+
     case 'firstRunCycle':
       try {
         console.log('[ProcessingWorker] Starting Python script with sessionId:', event.data.sessionId)
@@ -205,9 +271,19 @@ function runCycle(payload) {
       const lastEventType = self.lastEventType;
       const lastEventInfo = self.lastEventInfo || '';
       
-      // If the previous command was a donation or exit command, we should show end page instead
-      if (lastEventType === 'CommandSystemDonate' || lastEventType === 'CommandSystemExit') {
-        console.log('[ProcessingWorker] Received void payload after donation/exit, showing end page');
+      // If the previous command was a donation command, don't render end page yet - wait for database response
+      if (lastEventType === 'CommandSystemDonate') {
+        console.log('[ProcessingWorker] Received void payload after donation, but waiting for database response');
+        console.log('[ProcessingWorker] Staying on donation page until database operation completes');
+        
+        // Stay on donation page - don't render end page yet
+        // The bridge will trigger the end page after database operation completes
+        return;
+      }
+      
+      // If the previous command was an exit command, we should show end page
+      if (lastEventType === 'CommandSystemExit') {
+        console.log('[ProcessingWorker] Received void payload after exit, showing end page');
         
         // Let Python handle the end page creation to ensure proper donation status tracking
         try {

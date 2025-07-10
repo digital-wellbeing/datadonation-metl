@@ -1949,8 +1949,8 @@ def process(session_id):
         last_donation_id = None
     
     debug_log(f"Final donation ID for end page: {last_donation_id}")
-    debug_log("Rendering end page")
-    yield render_end_page()
+    debug_log("Waiting for database response before rendering end page")
+    # End page will be rendered by the bridge after database operation completes
 
 def render_end_page():
     global last_donation_id, user_donated

@@ -20,6 +20,9 @@ if (!rootElement) {
 // Create a root React instance
 const root = ReactDOM.createRoot(rootElement);
 
+// Log application version
+console.log('🚀 Feldspar Data Donation v0.1.0 - Ready to collect data donations!');
+
 // Global assembly that will be initialized when needed
 let assembly: Assembly;
 
@@ -106,6 +109,10 @@ const initializeBackend = async (platform: string, locale: string): Promise<void
     
     // Start the processing engine
     assembly.processingEngine.start();
+    
+    // Make the processing engine available globally for the bridge
+    (window as any).workerEngine = assembly.processingEngine;
+    console.log('[Index] Processing engine made available globally');
     
     // Render the app using BrowserRouter, using the assembly's own rendering mechanism
     console.log('[Index] Rendering app...');

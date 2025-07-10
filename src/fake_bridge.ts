@@ -87,17 +87,28 @@ export default class FakeBridge implements Bridge {
         : 'unknown.json';
       console.log('[FakeBridge] Extracted filename:', originalFilename);
 
-      // Insert into Supabase with detailed error handling
+      // Insert into Supabase with detailed error handling and timeout
       console.log('[FakeBridge] [SUBMISSION_TRACKING] Attempting database insert with submission ID:', window.submissionId);
+      
+      // Insert with extended timeout for large files
+      const filteredData = data.filter((item: DataItem) => item.id !== 'metadata');
+      const dataSize = JSON.stringify(filteredData).length;
+      const isLargeFile = dataSize > 10 * 1024 * 1024; // 10MB threshold
+      
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] Data size:', dataSize, 'bytes, using', isLargeFile ? 'extended timeout' : 'standard timeout');
+      
+      // Set timeout based on file size
+      const timeoutMs = isLargeFile ? 10 * 60 * 1000 : 30 * 1000; // 10 minutes for large files, 30 seconds for small files
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] Using timeout:', timeoutMs / 1000, 'seconds');
       
       const { data: insertedData, error } = await supabase
         .from('uploads')
         .insert({
-          json_data: data.filter((item: DataItem) => item.id !== 'metadata'),  // Remove metadata from stored data
-          submission_id: window.submissionId,  // Use the frontend-generated submission ID
+          json_data: filteredData,
+          submission_id: window.submissionId,
           platform: platform,
-          // created_at will be automatically set by Supabase
-        });
+        })
+        .abortSignal(AbortSignal.timeout(timeoutMs));
 
       if (error) {
         console.error('[FakeBridge] [SUBMISSION_TRACKING] Database insert failed:', error);
@@ -188,6 +199,19 @@ export default class FakeBridge implements Bridge {
       hasSubmissionId: !!(command.info || window.submissionId)
     });
     
-    // Exit is handled by the processing engine
+    // Trigger void payload to worker to render end page
+    console.log('[FakeBridge] [SUBMISSION_TRACKING] Triggering void payload to render end page');
+    this.triggerVoidPayload();
+  }
+
+  private triggerVoidPayload(): void {
+    // Get the worker engine and trigger end page
+    const workerEngine = (window as any).workerEngine;
+    if (workerEngine && workerEngine.worker) {
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] Sending showEndPage event to worker');
+      workerEngine.worker.postMessage({ eventType: 'showEndPage' });
+    } else {
+      console.error('[FakeBridge] [SUBMISSION_TRACKING] Worker engine or worker not found, cannot trigger end page');
+    }
   }
 }
