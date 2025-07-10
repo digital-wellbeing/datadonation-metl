@@ -106,9 +106,9 @@ const selectButtonLabel = (): Translatable => {
 
 const note = (): Translatable => {
   return new TextBundle()
-    .add('en', 'Note: The process to extract the correct data from the file is done on your own computer. No data is stored or sent yet.')
-    .add('de', 'Anmerkung: Die weitere Verarbeitung der Datei erfolgt auf Ihrem eigenen Endgerät. Es werden noch keine Daten gespeichert oder weiter gesendet.')
-    .add('nl', 'NB: Het proces om de juiste gegevens uit het bestand te halen gebeurt op uw eigen computer. Er worden nog geen gegevens opgeslagen of verstuurd.')
+    .add('en', 'Note: The process to extract the correct data from the file is done on your own computer. No data is stored or sent yet. Extraction may take several seconds depending on the data size.')
+    .add('de', 'Anmerkung: Die weitere Verarbeitung der Datei erfolgt auf Ihrem eigenen Endgerät. Es werden noch keine Daten gespeichert oder weiter gesendet. Die Extraktion kann je nach Datengröße mehrere Sekunden dauern.')
+    .add('nl', 'NB: Het proces om de juiste gegevens uit het bestand te halen gebeurt op uw eigen computer. Er worden nog geen gegevens opgeslagen of verstuurd. De extractie kan enkele seconden duren, afhankelijk van de grootte van de gegevens.')
 }
 
 const placeholder = (): Translatable => {

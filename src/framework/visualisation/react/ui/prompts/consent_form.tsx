@@ -234,6 +234,7 @@ export const ConsentForm = (props: Props): JSX.Element => {
         {!props.validationFailed && (
           <div>
             <BodyLarge margin='' text={Translator.translate(props.donateQuestion ?? donateQuestionLabel, locale)} />
+            <BodyLarge margin='mt-2' text={Translator.translate(processingTimeLabel, locale)} />
             <div className='flex flex-row gap-4 mt-4 mb-4'>
               <PrimaryButton
                 label={Translator.translate(props.donateButton ?? donateButtonLabel, locale)}
@@ -264,6 +265,11 @@ const cancelButtonLabel = new TextBundle()
   .add('en', 'No')
   .add('de', 'Nein')
   .add('nl', 'Nee')
+
+const processingTimeLabel = new TextBundle()
+  .add('en', 'Note: Sending the data may take several seconds depending on the data size.')
+  .add('de', 'Hinweis: Das Senden der Daten kann je nach Datengröße mehrere Sekunden dauern.')
+  .add('nl', 'Opmerking: Het verzenden van de gegevens kan enkele seconden duren, afhankelijk van de grootte van de gegevens.')
 
 const description = new TextBundle()
   .add('en', 'Determine whether you would like to donate the data below. Carefully check the data and adjust when required. With your donation you contribute to the previously described research. Thank you in advance.')
