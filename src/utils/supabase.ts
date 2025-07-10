@@ -19,24 +19,16 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     global: {
         // Set 5-minute timeout for all requests
         fetch: (url, options) => {
+            const headers = new Headers(options?.headers || {});
+            headers.set('Prefer', 'return=minimal');
+            
             return fetch(url, {
                 ...options,
                 signal: AbortSignal.timeout(FIVE_MINUTES_MS),
+                headers: headers
             });
         }
     }
 });
 
-// Test the connection silently
-const testConnection = async () => {
-    try {
-        await supabase.from('uploads').select('count', { count: 'exact', head: true });
-        // Connection successful - no need to log in production
-    } catch (error: unknown) {
-        const err = error as Error;
-        console.error('Database connection error. Please verify your configuration.');
-        // Don't log detailed error messages that could expose system information
-    }
-};
-
-testConnection();
+// Connection test removed - RLS policies don't allow anonymous SELECT operations

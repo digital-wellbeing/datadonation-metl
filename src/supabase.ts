@@ -19,9 +19,13 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
     // Set 5-minute timeout for all requests
     fetch: (url, options) => {
+      const headers = new Headers(options?.headers || {})
+      headers.set('Prefer', 'return=minimal')
+      
       return fetch(url, {
         ...options,
         signal: AbortSignal.timeout(FIVE_MINUTES_MS),
+        headers: headers
       })
     }
   }

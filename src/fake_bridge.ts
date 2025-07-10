@@ -100,7 +100,7 @@ export default class FakeBridge implements Bridge {
       const FIVE_MINUTES_MS = 300000;
       
       const { data: insertResult, error } = await supabase
-        .rpc('insert_large_json_upload', {
+        .rpc('insert_large_json_upload_no_return', {
           p_json_data: filteredData,
           p_submission_id: window.submissionId,
           p_platform: platform,
