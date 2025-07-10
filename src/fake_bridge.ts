@@ -90,25 +90,22 @@ export default class FakeBridge implements Bridge {
       // Insert into Supabase with detailed error handling and timeout
       console.log('[FakeBridge] [SUBMISSION_TRACKING] Attempting database insert with submission ID:', window.submissionId);
       
-      // Insert with extended timeout for large files
+      // Use PostgreSQL function with extended timeout for large JSON uploads
       const filteredData = data.filter((item: DataItem) => item.id !== 'metadata');
       const dataSize = JSON.stringify(filteredData).length;
-      const isLargeFile = dataSize > 10 * 1024 * 1024; // 10MB threshold
       
-      console.log('[FakeBridge] [SUBMISSION_TRACKING] Data size:', dataSize, 'bytes, using', isLargeFile ? 'extended timeout' : 'standard timeout');
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] Data size:', dataSize, 'bytes, using PostgreSQL function with 5-minute timeout');
       
-      // Set timeout based on file size
-      const timeoutMs = isLargeFile ? 10 * 60 * 1000 : 30 * 1000; // 10 minutes for large files, 30 seconds for small files
-      console.log('[FakeBridge] [SUBMISSION_TRACKING] Using timeout:', timeoutMs / 1000, 'seconds');
+      // 5 minutes = 300 seconds = 300,000 milliseconds
+      const FIVE_MINUTES_MS = 300000;
       
-      const { data: insertedData, error } = await supabase
-        .from('uploads')
-        .insert({
-          json_data: filteredData,
-          submission_id: window.submissionId,
-          platform: platform,
+      const { data: insertResult, error } = await supabase
+        .rpc('insert_large_json_upload', {
+          p_json_data: filteredData,
+          p_submission_id: window.submissionId,
+          p_platform: platform,
         })
-        .abortSignal(AbortSignal.timeout(timeoutMs));
+        .abortSignal(AbortSignal.timeout(FIVE_MINUTES_MS));
 
       if (error) {
         console.error('[FakeBridge] [SUBMISSION_TRACKING] Database insert failed:', error);
