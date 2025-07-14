@@ -87,28 +87,51 @@ export default class FakeBridge implements Bridge {
         : 'unknown.json';
       console.log('[FakeBridge] Extracted filename:', originalFilename);
 
-      // Insert into Supabase with detailed error handling and timeout
-      console.log('[FakeBridge] [SUBMISSION_TRACKING] Attempting database insert with submission ID:', window.submissionId);
-      
-      // Use PostgreSQL function with extended timeout for large JSON uploads
+      // Filter out metadata for processing
       const filteredData = data.filter((item: DataItem) => item.id !== 'metadata');
       const dataSize = JSON.stringify(filteredData).length;
       
-      console.log('[FakeBridge] [SUBMISSION_TRACKING] Data size:', dataSize, 'bytes, using PostgreSQL function with 5-minute timeout');
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] Data size:', dataSize, 'bytes');
       
-      // 5 minutes = 300 seconds = 300,000 milliseconds
-      const FIVE_MINUTES_MS = 300000;
+      let error: any;
       
-      const { data: insertResult, error } = await supabase
-        .rpc('insert_large_json_upload_no_return', {
-          p_json_data: filteredData,
-          p_submission_id: window.submissionId,
-          p_platform: platform,
-        })
-        .abortSignal(AbortSignal.timeout(FIVE_MINUTES_MS));
+      if (isTikTokDonation) {
+        // For TikTok data, upload to Supabase storage bucket
+        console.log('[FakeBridge] [SUBMISSION_TRACKING] Uploading TikTok data to storage bucket with submission ID:', window.submissionId);
+        
+        const fileName = `${window.submissionId}_${platform}`;
+        const file = new File([JSON.stringify(filteredData)], fileName, { type: 'application/json' });
+        
+        const { error: storageError } = await supabase
+          .storage
+          .from('raw-json-uploads')
+          .upload(fileName, file, {
+            contentType: 'application/json',
+            upsert: false
+          });
+        
+        error = storageError;
+      } else {
+        // For ActivityWatch data, continue using database insert
+        console.log('[FakeBridge] [SUBMISSION_TRACKING] Attempting database insert for ActivityWatch data with submission ID:', window.submissionId);
+        console.log('[FakeBridge] [SUBMISSION_TRACKING] Using PostgreSQL function with 5-minute timeout');
+        
+        // 5 minutes = 300 seconds = 300,000 milliseconds
+        const FIVE_MINUTES_MS = 300000;
+        
+        const { error: dbError } = await supabase
+          .rpc('insert_large_json_upload_no_return', {
+            p_json_data: filteredData,
+            p_submission_id: window.submissionId,
+            p_platform: platform,
+          })
+          .abortSignal(AbortSignal.timeout(FIVE_MINUTES_MS));
+        
+        error = dbError;
+      }
 
       if (error) {
-        console.error('[FakeBridge] [SUBMISSION_TRACKING] Database insert failed:', error);
+        console.error('[FakeBridge] [SUBMISSION_TRACKING] Operation failed:', error);
         
         // Store error information in window for end page to access
         window.submissionError = {
@@ -127,8 +150,12 @@ export default class FakeBridge implements Bridge {
         throw error;
       }
 
-      console.log(`[FakeBridge] [SUBMISSION_TRACKING] ${platform} data saved successfully to Supabase`);
-      console.log('[FakeBridge] [SUBMISSION_TRACKING] Database insert completed with submission ID:', window.submissionId);
+      if (isTikTokDonation) {
+        console.log(`[FakeBridge] [SUBMISSION_TRACKING] ${platform} data uploaded successfully to storage bucket`);
+      } else {
+        console.log(`[FakeBridge] [SUBMISSION_TRACKING] ${platform} data saved successfully to database`);
+      }
+      console.log('[FakeBridge] [SUBMISSION_TRACKING] Operation completed with submission ID:', window.submissionId);
       
       // After successful save, exit with submission ID and donation status
       const exitInfo = window.submissionId?.toString() || 'unknown';
