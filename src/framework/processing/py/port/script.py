@@ -747,40 +747,117 @@ def extract_file(zipfile_ref, filename):
         return "invalid"
 
 def extract_id(jsonfile):
-    print(">>> in extract_id(), jsonfile type:", type(jsonfile), "keys (if dict):", (list(jsonfile.keys()) if isinstance(jsonfile, dict) else None))
-    # First path (old format):
-    profile = jsonfile.get('Profile', {}) or {}
-    profile_info = profile.get('Profile Information', {}) or {}
-    profile_map = profile_info.get('ProfileMap', {}) or {}
-    username = profile_map.get('userName')
-    print("After first path, username =", repr(username))
 
-    if not username:
-        # Second path (new format):
-        alt_info = profile.get('Profile Info', {}) or {}
-        alt_map = alt_info.get('ProfileMap', {}) or {}
-        username = alt_map.get('userName')
-        print("After second path, username =", repr(username))
+    try:
+        print(">>> in extract_id(), jsonfile type:", type(jsonfile), "keys (if dict):", (list(jsonfile.keys()) if isinstance(jsonfile, dict) else None))
+        # First path:
+        profile = jsonfile.get('Profile', {}) or jsonfile.get('Profile And Settings', {}) or {}
+        profile_info = profile.get('Profile Information', {}) or profile.get('Profile Info') or {}
+        profile_map = profile_info.get('ProfileMap', {}) or {}
+        username = profile_map.get('userName')
+        print("After first path, username =", repr(username))
 
-    if not username:
-        print("Error extracting ID: Username not found in either 'Profile Information' or 'Profile Info'.")
-    else:
-        print("Found username:", username)
+        if not username:
+            alt_info = profile.get('Profile Info', {}) or {}
+            alt_map = alt_info.get('ProfileMap', {}) or {}
+            username = alt_map.get('userName')
+            print("After second path, username =", repr(username))
+
+        if not username:
+            print("Error extracting ID: Username not found in either 'Profile Information' or 'Profile Info'.")
+        else:
+            print("Found username:", username)
+        
+        hashed_username = hash_username(username) if username else None
+
+        return ExtractionResult(
+            "id",
+            props.Translatable({"en": "Unique Identifier (note: deleting this will invalidate your submission)", "nl": "Unique Identifier (note: deleting this will invalidate your submission)"}),
+            pd.DataFrame([hashed_username])
+        )
     
-    hashed_username = hash_username(username) if username else None
+    except Exception as e:
+        print(f"Error extracting ID: {e}")
 
+def extract_sharehistory(jsonfile):
+
+    share_list = []
+    print("Trying to extract share history…")
+
+    try:
+        # Navigate to the list that holds all share events
+        activity_root  = jsonfile.get("Activity") or jsonfile.get("Your Activity") or {}
+        share_root = activity_root.get("Share History", {})
+        share_history_list = share_root.get("ShareHistoryList", [])
+
+        for idx, item in enumerate(share_history_list):
+            # Normalise keys to lowercase for defensive access
+            item_lower = {k.lower(): v for k, v in item.items()}
+
+            date  = item_lower.get("date", "")
+            link  = item_lower.get("link", "")
+            scontent = item_lower.get("sharedcontent", "")
+            method   = item_lower.get("method", "")
+
+            if date and link:
+                share_list.append(
+                    {
+                        "Date":          date,
+                        "Link":          link,
+                        "SharedContent": scontent,
+                        "Method":        method,
+                    }
+                )
+            else:
+                print(f"Share {idx + 1} is missing 'Date' or 'Link'. Skipping.")
+
+    except Exception as e:
+        print(f"Error extracting Share History: {e}")
+
+    print(f"Total shares extracted: {len(share_list)}")
     return ExtractionResult(
-        "id",
-        props.Translatable({"en": "Unique Identifier (note: deleting this will invalidate your submission)", "nl": "Unique Identifier (note: deleting this will invalidate your submission)"}),
-        pd.DataFrame([hashed_username])
+        "shares",
+        props.Translatable({"en": "Shares", "nl": "Shares"}),
+        pd.DataFrame(share_list)
+    )
+
+def extract_activity_summary(jsonfile):
+
+    print("Trying to extract activity summary…")
+    summary_dict = {}
+
+    try:
+        # Navigate defensively to the summary map
+        activity_root  = jsonfile.get("Activity") or jsonfile.get("Your Activity") or {}
+        summary_root   = activity_root.get("Activity Summary", {})
+        summary_map    = summary_root.get("ActivitySummaryMap", {})
+
+        # Collect only numeric keys, skip descriptive notes
+        for k, v in summary_map.items():
+            if k.lower() == "note":
+                continue
+            summary_dict[k] = v
+
+        if not summary_dict:
+            print("ActivitySummaryMap is empty or contains only non-numeric keys.")
+
+    except Exception as e:
+        print(f"Error extracting Activity Summary Map: {e}")
+
+    print(f"Metrics extracted: {len(summary_dict)}")
+    return ExtractionResult(
+        "activity_summary",
+        props.Translatable({"en": "Activity summary", "nl": "Activiteitssamenvatting"}),
+        pd.DataFrame([summary_dict])
     )
 
 def extract_likes(jsonfile):
+
     like_list = []
     print('Trying to extract likes...')
 
     try:
-        # Extract the "Like List" - handle both old and new formats
+        # Extract the "Like List"
         activity_root = jsonfile.get("Activity") or jsonfile.get("Your Activity") or {}
         item_favorite_list = activity_root.get('Like List', {}).get('ItemFavoriteList', [])
 
@@ -802,6 +879,7 @@ def extract_likes(jsonfile):
         props.Translatable({"en": "Likes", "nl": "Likes"}),
         pd.DataFrame(like_list)
     )
+
 
 
 def extract_watch_history(jsonfile):
@@ -865,11 +943,23 @@ def extract_logins(jsonfile):
 
 def extract_video_uploads(jsonfile):
     uploads_list = []
-    print('Trying to extract video uploads...')
+    print('Trying to extract logins...')
 
     try:
-        # Extract the "VideoList"
-        json_videos = jsonfile.get('Video', {}).get('Videos', {}).get('VideoList', [])
+        # Attempt original location first
+        json_videos = (
+            jsonfile.get("Video", {})
+                    .get("Videos", {})
+                    .get("VideoList", [])
+        )
+
+        # Fallback to the 'Post' layout if nothing was found
+        if not json_videos:
+            json_videos = (
+                jsonfile.get("Post", {})
+                        .get("Posts", {})
+                        .get("VideoList", [])
+            )
 
         for idx, video in enumerate(json_videos):
             date_str = video.get('Date', '')
@@ -894,7 +984,7 @@ def extract_video_uploads(jsonfile):
                 likes = 0
 
             uploads_list.append({'Year': year, 'Week': week_num, 'Likes': likes})
-            print(f"Extracted Video {idx+1}: Year={year}, Week={week_num}, Likes={likes}")
+            # print(f"Extracted Video {idx+1}: Year={year}, Week={week_num}, Likes={likes}")
 
     except Exception as e:
         print(f"Error extracting video uploads: {e}")
@@ -902,8 +992,8 @@ def extract_video_uploads(jsonfile):
     print(f"Total uploads extracted: {len(uploads_list)}")
     return ExtractionResult(
         "UploadHistory",
-        props.Translatable({"en": "Upload History", 
-                            "nl": "Upload History"}),
+        props.Translatable({"en": "Upload History (de-identified, no links/content extracted)", 
+                            "nl": "Upload History (de-identified, no links/content extracted)"}),
         pd.DataFrame(uploads_list)
     )
 
@@ -1520,6 +1610,8 @@ def extract_data(path, platform='TikTok'):
         extractors = [
             extract_likes,
             extract_watch_history,
+            extract_activity_summary,
+            extract_sharehistory,
             extract_logins,
             extract_video_uploads,
             extract_purchases,

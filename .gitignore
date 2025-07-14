@@ -64,3 +64,4 @@ mcp.json
 *.ts
 
 tests/
+.env.example
