@@ -21,6 +21,9 @@
 /build
 /releases
 /static
+/index.html
+/asset-manifest.json
+/styles.css
 
 # Python
 __pycache__/
