@@ -13,12 +13,14 @@ const titleText = new TextBundle().add('en', 'Welcome to Data Donation').add('nl
 const subtitleText = new TextBundle().add('en', 'Choose a platform to donate your data from').add('nl', 'Kies een platform om je data van te doneren')
 const tiktokText = new TextBundle().add('en', 'TikTok').add('nl', 'TikTok')
 const activityWatchText = new TextBundle().add('en', 'ActivityWatch').add('nl', 'ActivityWatch')
+const pokemonGoText = new TextBundle().add('en', 'Pokémon Go').add('nl', 'Pokémon Go')
 
 interface Copy {
   title: string
   subtitle: string
   tiktok: string
   activityWatch: string
+  pokemonGo: string
 }
 
 type Props = Weak<ReactFactoryContext>
@@ -29,7 +31,8 @@ function prepareCopy(locale: string): Copy {
     title: Translator.translate(titleText, locale),
     subtitle: Translator.translate(subtitleText, locale),
     tiktok: Translator.translate(tiktokText, locale),
-    activityWatch: Translator.translate(activityWatchText, locale)
+    activityWatch: Translator.translate(activityWatchText, locale),
+    pokemonGo: Translator.translate(pokemonGoText, locale)
   }
 }
 
@@ -75,6 +78,12 @@ export const PlatformSelector = ({ locale, resolve }: ReactFactoryContext): JSX.
             className="flex items-center justify-center px-4 py-3 border border-gray-300 shadow-sm text-gray-900 bg-white rounded-md hover:border-blue-500 hover:shadow-md transition-all"
           >
             ActivityWatch
+          </button>
+          <button
+            onClick={() => handlePlatformSelect('PokemonGo')}
+            className="flex items-center justify-center px-4 py-3 border border-gray-300 shadow-sm text-gray-900 bg-white rounded-md hover:border-blue-500 hover:shadow-md transition-all"
+          >
+            Pokémon Go
           </button>
         </div>
       </div>

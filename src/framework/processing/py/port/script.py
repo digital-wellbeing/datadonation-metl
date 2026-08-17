@@ -1947,12 +1947,200 @@ class DataDonation:
         print("DataDonation completed.")
         return
 
-# let's write this down 
+# let's write this down
 # we call data_donation(session_id) and instantiate a DataDonation object
 # the DataDonation object is a generator that yields from a DataDonationProcessor object
 # the DataDonationProcessor first yields from prompt_file, then from extract_data, then from prompt_consent
 # prompt_consent yields from render_donation_page, then from donate
-# and when all that is done, we should be out of the whole loop and move onto render_end_page, and yet it doesn't happen. 
+# and when all that is done, we should be out of the whole loop and move onto render_end_page, and yet it doesn't happen.
+
+# =============================================================================
+# Pokemon Go extraction
+# Niantic exports a ZIP containing several JSON files. Each extractor below
+# targets one file pattern; all fields that could identify location (GPS coords,
+# IP addresses, exact addresses) are dropped. Usernames are SHA-256 hashed.
+# Extraction is best-effort: if a file is missing or has an unexpected schema
+# the extractor returns None and is silently skipped.
+# =============================================================================
+
+def _pokemongo_parse_zip(file_path):
+    """Return a ZipFile handle, or None if the file is not a valid ZIP."""
+    zf = get_zipfile(file_path)
+    return None if zf == "invalid" else zf
+
+
+def _pokemongo_find_json(zf, *candidates):
+    """Return the parsed JSON for the first matching filename in the ZIP."""
+    names = zf.namelist()
+    for candidate in candidates:
+        matches = fnmatch.filter(names, f"**/{candidate}") or fnmatch.filter(names, candidate)
+        if matches:
+            with zf.open(matches[0]) as f:
+                try:
+                    return json.load(f)
+                except Exception:
+                    return None
+    return None
+
+
+def _pokemongo_extract_profile(zf):
+    """Hashed username and account creation date."""
+    data = _pokemongo_find_json(zf, "account.json", "profile.json", "user.json")
+    if data is None:
+        return None
+    try:
+        account = data if isinstance(data, dict) else {}
+        username = account.get("username") or account.get("userName") or account.get("playerId", "")
+        created = account.get("created") or account.get("createdTime") or account.get("accountCreationTime", "")
+        return ExtractionResult(
+            "pokemongo_profile",
+            props.Translatable({"en": "Account", "nl": "Account"}),
+            pd.DataFrame([{"hashed_username": hash_username(str(username)) if username else "", "account_created": created}])
+        )
+    except Exception as e:
+        debug_log(f"Pokemon Go profile extraction error: {e}")
+        return None
+
+
+def _pokemongo_extract_playtime(zf):
+    """Play session timestamps and durations (no location data)."""
+    data = _pokemongo_find_json(zf, "activity.json", "play_log.json", "sessions.json")
+    if data is None:
+        return None
+    try:
+        sessions = data if isinstance(data, list) else data.get("sessions") or data.get("activity") or []
+        rows = []
+        for s in sessions:
+            rows.append({
+                "timestamp": s.get("timestamp") or s.get("startTime") or s.get("date", ""),
+                "duration_seconds": s.get("durationSeconds") or s.get("duration", ""),
+                "steps": s.get("steps") or s.get("stepCount", ""),
+            })
+        if not rows:
+            return None
+        return ExtractionResult(
+            "pokemongo_playtime",
+            props.Translatable({"en": "Play Sessions", "nl": "Spelsessies"}),
+            pd.DataFrame(rows)
+        )
+    except Exception as e:
+        debug_log(f"Pokemon Go playtime extraction error: {e}")
+        return None
+
+
+def _pokemongo_extract_battles(zf):
+    """Battle history: timestamp, type, and outcome only."""
+    data = _pokemongo_find_json(zf, "battles.json", "battle_history.json", "pvp.json")
+    if data is None:
+        return None
+    try:
+        battles = data if isinstance(data, list) else data.get("battles") or data.get("battleHistory") or []
+        rows = []
+        for b in battles:
+            rows.append({
+                "timestamp": b.get("timestamp") or b.get("battleTime", ""),
+                "type": b.get("type") or b.get("battleType", ""),
+                "outcome": b.get("outcome") or b.get("result", ""),
+            })
+        if not rows:
+            return None
+        return ExtractionResult(
+            "pokemongo_battles",
+            props.Translatable({"en": "Battle History", "nl": "Gevechtsgeschiedenis"}),
+            pd.DataFrame(rows)
+        )
+    except Exception as e:
+        debug_log(f"Pokemon Go battles extraction error: {e}")
+        return None
+
+
+def _pokemongo_extract_friends(zf):
+    """Friends list with hashed usernames and friendship dates."""
+    data = _pokemongo_find_json(zf, "friends.json", "friend_list.json", "friendships.json")
+    if data is None:
+        return None
+    try:
+        friends = data if isinstance(data, list) else data.get("friends") or data.get("friendList") or []
+        rows = []
+        for f in friends:
+            username = f.get("username") or f.get("friendName") or f.get("name", "")
+            rows.append({
+                "hashed_username": hash_username(str(username)) if username else "",
+                "friendship_date": f.get("created") or f.get("friendshipDate") or f.get("date", ""),
+            })
+        if not rows:
+            return None
+        return ExtractionResult(
+            "pokemongo_friends",
+            props.Translatable({"en": "Friends", "nl": "Vrienden"}),
+            pd.DataFrame(rows)
+        )
+    except Exception as e:
+        debug_log(f"Pokemon Go friends extraction error: {e}")
+        return None
+
+
+def _pokemongo_extract_purchases(zf):
+    """Purchase history: timestamp, item, and amount."""
+    data = _pokemongo_find_json(zf, "purchases.json", "purchase_history.json", "transactions.json")
+    if data is None:
+        return None
+    try:
+        purchases = data if isinstance(data, list) else data.get("purchases") or data.get("purchaseHistory") or []
+        rows = []
+        for p in purchases:
+            rows.append({
+                "timestamp": p.get("timestamp") or p.get("purchaseTime") or p.get("date", ""),
+                "item": p.get("item") or p.get("itemName") or p.get("sku", ""),
+                "amount": p.get("amount") or p.get("price", ""),
+                "currency": p.get("currency", ""),
+            })
+        if not rows:
+            return None
+        return ExtractionResult(
+            "pokemongo_purchases",
+            props.Translatable({"en": "Purchase History", "nl": "Aankoopgeschiedenis"}),
+            pd.DataFrame(rows)
+        )
+    except Exception as e:
+        debug_log(f"Pokemon Go purchases extraction error: {e}")
+        return None
+
+
+def extract_data_pokemongo(file_path):
+    """Main entry point for Pokemon Go data extraction.
+
+    Expects a Niantic data export ZIP. Extracts play sessions, battle history,
+    friends (hashed), and purchase history. Location data is never collected.
+    """
+    print("Started extracting Pokemon Go data")
+    zf = _pokemongo_parse_zip(file_path)
+    if zf is None:
+        debug_log("Pokemon Go: file is not a valid ZIP")
+        return []
+
+    extractors = [
+        _pokemongo_extract_profile,
+        _pokemongo_extract_playtime,
+        _pokemongo_extract_battles,
+        _pokemongo_extract_friends,
+        _pokemongo_extract_purchases,
+    ]
+
+    results = []
+    for extractor in extractors:
+        try:
+            result = extractor(zf)
+            if result is not None:
+                results.append(result)
+        except Exception as e:
+            debug_log(f"Error in {extractor.__name__}: {e}")
+
+    if not results:
+        debug_log("No Pokemon Go data could be extracted from the ZIP")
+
+    return results
+
 
 def process(session_id):
     global last_donation_id
@@ -2011,13 +2199,15 @@ def process(session_id):
     # Select the appropriate extractor based on platform
     if platform == 'ActivityWatch':
         debug_log("Using ActivityWatch extractor")
-        # Pass a function that calls extract_activitywatch_data with the file path
-        data_donation = DataDonation(platform, "application/json", 
+        data_donation = DataDonation(platform, "application/json",
                                      lambda file_path: extract_activitywatch_data(file_path))
+    elif platform == 'PokemonGo':
+        debug_log("Using Pokemon Go extractor")
+        data_donation = DataDonation(platform, "application/zip,application/json",
+                                     lambda file_path: extract_data_pokemongo(file_path))
     else:
         debug_log(f"Using default extractor for {platform}")
-        # Pass a function that calls extract_data with file path and platform
-        data_donation = DataDonation(platform, "application/json", 
+        data_donation = DataDonation(platform, "application/json",
                                      lambda file_path: extract_data(file_path, platform))
     
     # Process the data donation

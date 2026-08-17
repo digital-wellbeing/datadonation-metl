@@ -31,7 +31,7 @@ const App: React.FC<AppProps> = ({ assembly, locale, selectedPlatform }) => {
     
     // If we're at a platform path, extract the platform from the URL
     const platformMatch = path.match(/^\/([^/]+)(\/.*)?$/);
-    if (platformMatch && platformMatch[1] && !['tiktok', 'activitywatch'].includes(platformMatch[1].toLowerCase())) {
+    if (platformMatch && platformMatch[1] && !['tiktok', 'activitywatch', 'pokemongo'].includes(platformMatch[1].toLowerCase())) {
       console.log('[App] Invalid platform detected in URL, redirecting to platform selection');
       navigate('/');
     }

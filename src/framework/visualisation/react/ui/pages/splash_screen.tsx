@@ -41,6 +41,8 @@ function getTitleForPlatform(platform: string): TextBundle {
       return twitterTitle
     case 'activitywatch':
       return activityWatchTitle
+    case 'pokemongo':
+      return pokemonGoTitle
     case 'tiktok':
     default:
       return tiktokTitle
@@ -108,6 +110,8 @@ export const SplashScreen = (props: Props): JSX.Element => {
         return { en: twitterEnDescription, nl: twitterNlDescription }
       case 'activitywatch':
         return { en: activityWatchEnDescription, nl: activityWatchNlDescription }
+      case 'pokemongo':
+        return { en: pokemonGoEnDescription, nl: pokemonGoEnDescription }
       case 'tiktok':
       default:
         return { en: tiktokEnDescription, nl: tiktokNlDescription }
@@ -399,6 +403,36 @@ export const SplashScreen = (props: Props): JSX.Element => {
     </>
   )
 
+  const pokemonGoEnDescription: JSX.Element = (
+    <>
+      <div className='text-bodylarge font-body text-grey1'>
+        <div className='mb-4'>
+          You are about to start the process of donating your Pokémon Go data to our Oxford study on player behaviour and wellbeing. The data that we ask you to donate will be used for academic research.
+        </div>
+        <div className='mb-4'>
+          We will walk you through this process step by step. During this process no data is stored or sent to a server. You can delete rows from the data before donating. Data will only be donated and stored when you click the button "Yes, donate" on the page that shows your data.
+        </div>
+        <div className='mb-4'>
+          We collect only selected data from your Niantic export: play session timing, battle history, step counts (no location data), friends list (with usernames hashed), and purchase history. GPS coordinates, birthdates, and IP addresses are discarded before storage.
+        </div>
+        <div className='mb-6'>
+          By clicking the button "<span className='font-bodybold'>Yes, donate</span>":
+        </div>
+        <div className='flex flex-col gap-3 mb-6'>
+          <Bullet>
+            <div>you fully and voluntarily agree to donate your data for this research.</div>
+          </Bullet>
+          <Bullet>
+            <div>you are aware that when your data is used in academic publications, or made publicly available, this will be anonymous.</div>
+          </Bullet>
+          <Bullet>
+            <div>you are aware that you have the right to withdraw your permission.</div>
+          </Bullet>
+        </div>
+      </div>
+    </>
+  )
+
 //   const footer: JSX.Element = <Footer />
 
 //   const sidebar: JS.Element = <Sidebar logo={LogoSvg} />
@@ -448,6 +482,10 @@ const twitterTitle = new TextBundle()
 const activityWatchTitle = new TextBundle()
   .add('en', 'Oxford ActivityWatch Study')
   .add('nl', 'Welkom bij ActivityWatch Onderzoek')
+
+const pokemonGoTitle = new TextBundle()
+  .add('en', 'Oxford Pokémon Go Study')
+  .add('nl', 'Oxford Pokémon Go Onderzoek')
 
 // Keep the existing continueButton and privacyLabel TextBundles
 const continueButton = new TextBundle()
