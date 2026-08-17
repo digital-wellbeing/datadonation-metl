@@ -14,10 +14,22 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
 
 # production
 /build
 /releases
+/static
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+/venv
+*.whl
+*.tar.gz
+*.egg-info/
 
 # misc
 .DS_Store
@@ -34,34 +46,29 @@ yarn-error.log*
 .aider*
 .vercel
 vercel.json
-
 .cursor
 .github
 .husky
 .vscode
-.netlify
 .netlify/
-.aider*
 netlify.toml
 
-# Logs that might contain sensitive information
+# Logs
 logs
 *.log
 
-# Local data files and uploads
+# Local data files (participant data, exports, working files)
 /uploads
 /data
+/chunks
+*.tsv
+tests/*.json
 
-# Additional specific files with potential secrets
+# Secrets and config overrides
 mcp.json
 **/mcp.json
-.cursor/mcp.json
 
 # Backup files
 *.bak
 *~
 *.swp
-*.ts
-
-tests/
-.env.example
