@@ -1,6 +1,30 @@
+# datadonation-metl
+
+🌐 **Live version:** https://datadonation.digital-kaleidoscope.org
+
+A [Feldspar](https://github.com/eyra/feldspar)-based data donation platform developed by [Tamas Foldes](https://github.com/andreifoldes) and [Nick Ballou](https://nickballou.com) to support research into the psychological effects of digital technologies like social media (e.g., TikTok) and video games (e.g., Pokémon Go). 
+
+Feldspar is developed for privacy-first sharing of platform data - in brief, it provides a framework for client-side data minimization and anonymization so that only the data researchers need is ever stored or seen by researchers, and as much sensitive data omitted or removed as possible. 
+
+Originally developed for research at the Oxford Internet Institute with Professor Andy Przybylski.
+
+## Projects
+
+The table below lists research projects that have used this framework, at various stages of completion.
+
+| Platform | Funder | Topic | Team | Status |
+|---|---|---|---|---|
+| **TikTok** | John Fell Fund | Mental health content consumption and mental health identity | Tamas Foldes, Nick Ballou | N = 300 donations received from 18–30 year olds with self-identified depression; ~6M videos extracted and metadata scraped; content coding underway; manuscript in preparation |
+| **ActivityWatch** | John Fell Fund | Gaming abstention and the role of screen time tracking | Tamas Foldes, Nick Ballou, Sabrina Norwood | N= 98 participants completed a 4-week study (half randomised to a 2-week gaming intervention); app-level usage data collected from ~40 Android participants; manuscript in preparation |
+| **Pokémon Go** | Academic Forum for the Study of Gambling | Random reward mechanics in mobile games | Nick Ballou, [Laurissa Tokarchuk](https://github.com/laurissa), [Alan Pedrassoli Chitayat](https://github.com/ChitaAPC) | N = 280 donations received from active players; initial analysis of player types completed and submitted to [EICS 2027](https://eics.acm.org/2027/index.html) |
+
+All data collected from the platform and corresponding analysis code will be shared publicly in anonymized form alongside each project's first scientific output.
+
+---
+
 # Feldspar
 
-Integration mechanism for developers to build an extension (flow application) that can be hosted on the Next platform. This is for example used in the Port program for data donation, as described below. 
+Integration mechanism for developers to build an extension (flow application) that can be hosted on the Next platform. This is for example used in the Port program for data donation, as described below.
 
 ## Digital Trace Data Donation (Port)
 More information about the Port program can be found [here](https://eyra.notion.site/Port-Program-4bbf0bbc466547af95f05c609405c4b2?pvs=4). 
