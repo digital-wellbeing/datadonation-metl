@@ -2322,6 +2322,8 @@ def extract_data_tiktok(path):
         extract_logins,
         extract_video_uploads,
         extract_purchases,
+        extract_sharehistory,
+        extract_activity_summary,
         extract_id
     ]
     print(f"Extracting data from {path}")
